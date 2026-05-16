@@ -64,6 +64,21 @@ button:focus-visible,
   }
 }
 
+/* Snap-scroll baseline — the landing page wraps full-viewport sections
+   in a ScrollView with style.scrollSnapType: 'y mandatory'. We add a
+   smooth scroll-behavior so wheel/keyboard scroll glides into snap
+   rather than jumping. The reduced-motion query above overrides this. */
+html, body { scroll-behavior: smooth; }
+
+/* Ken Burns — slow zoom + pan on full-bleed hero photography. Each
+   FullBleedSection applies animationName: 'honeyKenBurns'. The motion
+   is subtle (1.0 -> 1.06 scale) so it doesn't compete with the copy.
+   Cancelled wholesale under prefers-reduced-motion above. */
+@keyframes honeyKenBurns {
+  0%   { transform: scale(1.00) translate(0, 0); }
+  100% { transform: scale(1.06) translate(-1%, -1%); }
+}
+
 /* High-contrast / forced-colors mode — preserve our intent under
    Windows High Contrast and similar. */
 @media (forced-colors: active) {

@@ -1,197 +1,136 @@
-import { ScrollView, Text, View, Pressable } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React from 'react';
+import { ScrollView, View, Text, Pressable, Platform } from 'react-native';
 import { Link } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { ClassGallery } from '@/components/class-gallery';
+
+import { FullBleedSection } from '@/components/full-bleed-section';
+import { MeetMariaSection } from '@/components/meet-maria-section';
 
 // Honey Pilates — landing.
-// Visual language pulled from honeypilates.com. WCAG 2.1 AA pass:
-//   - all body copy meets 4.5:1 contrast on cream
-//   - every interactive has accessibilityRole + accessibilityLabel
-//   - decorative dividers / icons are marked accessibilityElementsHidden
-//   - tap targets ≥ 44px per WCAG 2.5.5 / iOS HIG
+// Vertical full-viewport snap-scroll: each section takes the screen,
+// snaps into place when the user releases their scroll, with a slow
+// Ken Burns zoom on each image (cancelled under prefers-reduced-motion
+// via global.css). Cinematic, boutique, image-forward.
+//
+// Sections:
+//   1. Hero               — full-bleed intro shot + "Precision. Elegance."
+//   2. Group Classes      — reformer studio in motion
+//   3. 1:1 Training       — instructor + student
+//   4. On Demand          — at-home practice
+//   5. Meet Maria         — founder portrait + bio
+//   6. Visit              — locations + closing CTA
 export default function HomeScreen() {
   return (
-    <SafeAreaView className="flex-1 bg-cream" edges={['top']}>
-      <ScrollView contentContainerClassName="pb-16">
-        {/* Brand mark + tagline strip */}
-        <View className="px-6 pt-4 pb-1">
-          <Text
-            className="text-ink-2 text-xs tracking-[0.32em] uppercase font-bodyMd"
-            accessibilityRole="text"
-          >
-            Honey Pilates
-          </Text>
-        </View>
+    <ScrollView
+      // Web-only scroll-snap container. Native uses pagingEnabled.
+      // @ts-expect-error CSS scrollSnapType is RN-web only
+      style={{ scrollSnapType: 'y mandatory' }}
+      pagingEnabled={Platform.OS !== 'web'}
+      decelerationRate="fast"
+      showsVerticalScrollIndicator={false}
+      contentContainerClassName="bg-cream"
+    >
+      <FullBleedSection
+        image="https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=1600&h=2200&fit=crop&q=85"
+        alt="A woman performing a stretching pose on a Pilates reformer in a warm-lit studio"
+        eyebrow="Honey Pilates"
+        title={'Precision.\nElegance.\nTransformation.'}
+        body="A luxury boutique Pilates studio for women in Patchogue and Sayville — small reformer + mat classes with real attention."
+        ctas={[
+          { label: 'Book a class', href: '/schedule' },
+          { label: 'Memberships', href: '/membership' },
+        ]}
+        align="end"
+        scrim={0.45}
+        level={1}
+      />
 
-        {/* Hero */}
-        <View className="px-6 pt-10 pb-12">
+      <FullBleedSection
+        image="https://images.unsplash.com/photo-1518611012118-696072aa579a?w=1600&h=2200&fit=crop&q=85"
+        alt="Women practicing a group Pilates mat class in a softly lit studio"
+        eyebrow="Women's Group Classes"
+        title="Strength, grace, and connection."
+        body="Eight reformers. One instructor. Sixty minutes of intentional movement for every body, from first-timer to seasoned practitioner."
+        ctas={[{ label: 'See the schedule', href: '/schedule' }]}
+        align="center"
+        scrim={0.4}
+      />
+
+      <FullBleedSection
+        image="https://images.unsplash.com/photo-1620188467120-5042ed1eb5da?w=1600&h=2200&fit=crop&q=85"
+        alt="A Pilates instructor coaching a private student through a reformer exercise"
+        eyebrow="1:1 Training"
+        title="One instructor. One body. One hour."
+        body="Private sessions tailored to your form, your goals, and where you are today. The fastest way into the work."
+        ctas={[{ label: 'Book a private', href: '/schedule' }]}
+        align="start"
+        scrim={0.4}
+      />
+
+      <FullBleedSection
+        image="https://images.unsplash.com/photo-1518310383802-640c2de311b2?w=1600&h=2200&fit=crop&q=85"
+        alt="A woman practicing Pilates at home with sunlight pouring in"
+        eyebrow="On Demand"
+        title={'Practice anywhere.\nAnytime.'}
+        body="A curated library of mat flows and targeted programs, recorded by our studio instructors. Yours with any active membership."
+        align="end"
+        scrim={0.35}
+      />
+
+      <MeetMariaSection />
+
+      {/* Visit / footer section — cream, half-height, closing CTA */}
+      <View
+        // @ts-expect-error scroll-snap-align is web-only
+        style={{ scrollSnapAlign: 'start', minHeight: 420 }}
+        className="bg-ink px-7 py-16"
+      >
+        <View style={{ maxWidth: 720, alignSelf: 'center', width: '100%' }}>
+          <Text className="text-peach text-[11px] tracking-[0.32em] uppercase font-bodyMd">
+            Visit
+          </Text>
           <Text
-            className="text-ink text-[44px] leading-[48px] font-display"
+            className="text-cream font-display text-4xl leading-[44px] mt-3"
             accessibilityRole="header"
-            // @ts-expect-error aria-level is a valid web role attr passed through
-            aria-level={1}
+            // @ts-expect-error
+            aria-level={2}
           >
-            Precision.{'\n'}Elegance.{'\n'}Transformation.
+            Patchogue · Sayville
           </Text>
-          <View
-            className="h-[1px] bg-ink/15 mt-7 mb-5 w-16"
-            accessibilityElementsHidden
-            importantForAccessibility="no"
-          />
-          <Text className="text-ink-2 text-base leading-7 font-body max-w-[28ch]">
-            A luxury boutique Pilates studio for women in Patchogue & Sayville —
-            small reformer + mat classes with real attention.
+          <Text className="text-cream/85 font-body text-base leading-7 mt-5 max-w-[42ch]">
+            Two locations across Long Island's south shore. Walk in, kick
+            your shoes off, and find a reformer with your name on it.
           </Text>
-          <View className="flex-row gap-3 mt-7">
+
+          <View className="flex-row flex-wrap gap-3 mt-7">
             <Link href="/schedule" asChild>
               <Pressable
-                className="bg-ink px-7 py-4 active:opacity-80"
+                className="bg-cream px-7 py-4 active:opacity-80"
                 accessibilityRole="link"
-                accessibilityLabel="Book a Pilates class"
-                accessibilityHint="Opens the class schedule"
+                accessibilityLabel="Book a class"
               >
-                <Text className="text-cream font-bodyBold tracking-[0.18em] uppercase text-xs">
+                <Text className="text-ink font-bodyBold tracking-[0.18em] uppercase text-xs">
                   Book a class
                 </Text>
               </Pressable>
             </Link>
             <Link href="/membership" asChild>
               <Pressable
-                className="border border-ink px-7 py-4 active:bg-ink/5"
+                className="border border-cream px-7 py-4 active:bg-cream/10"
                 accessibilityRole="link"
-                accessibilityLabel="View memberships and pricing"
-                accessibilityHint="Opens the membership page"
+                accessibilityLabel="View pricing and memberships"
               >
-                <Text className="text-ink font-bodyBold tracking-[0.18em] uppercase text-xs">
-                  Memberships
+                <Text className="text-cream font-bodyBold tracking-[0.18em] uppercase text-xs">
+                  Pricing
                 </Text>
               </Pressable>
             </Link>
           </View>
-        </View>
 
-        {/* Class gallery — Apple-style horizontal snap carousel */}
-        <ClassGallery />
-
-        {/* Peach feature band — echoes the live site's section colorways */}
-        <View
-          className="bg-peach py-12 px-6 mt-12"
-          accessibilityRole="text"
-        >
-          <Text className="text-ink text-[10px] tracking-[0.32em] uppercase font-bodyMd">
-            Women's Group Classes
-          </Text>
-          <Text
-            className="text-ink text-3xl font-display mt-3 leading-9"
-            accessibilityRole="header"
-            // @ts-expect-error
-            aria-level={2}
-          >
-            Strength, grace, and connection — on the reformer.
-          </Text>
-          <Text className="text-ink/80 mt-4 font-body leading-7">
-            Eight reformers. One instructor. Sixty minutes of intentional movement
-            for every body, from first-timer to seasoned practitioner.
-          </Text>
-          <Link href="/schedule" asChild>
-            <Pressable
-              className="self-start mt-5 py-3 -my-3 active:opacity-70"
-              accessibilityRole="link"
-              accessibilityLabel="See the full class schedule"
-            >
-              <Text className="text-ink font-bodyBold tracking-[0.18em] uppercase text-xs underline">
-                See the schedule →
-              </Text>
-            </Pressable>
-          </Link>
-        </View>
-
-        {/* On Demand teaser */}
-        <View className="px-6 pt-12">
-          <Text className="text-ink-2 text-[10px] tracking-[0.32em] uppercase font-bodyMd">
-            On Demand
-          </Text>
-          <Text
-            className="text-ink text-3xl font-display mt-3 leading-9"
-            accessibilityRole="header"
-            // @ts-expect-error
-            aria-level={2}
-          >
-            Practice anywhere.{'\n'}Anytime.
-          </Text>
-          <Text className="text-ink-2 mt-4 font-body leading-7">
-            A curated library of mat flows + targeted programs, recorded by our
-            studio instructors. Yours with any active membership.
+          <Text className="text-cream/60 text-[11px] tracking-[0.28em] uppercase font-bodyMd mt-12">
+            honeypilates.com · 631 · 600 · 8724
           </Text>
         </View>
-
-        {/* Lifestyle tagline */}
-        <View className="px-6 pt-14">
-          <Text
-            className="text-ink text-2xl font-display italic leading-9"
-            accessibilityRole="text"
-          >
-            "Move slowly enough to listen. Move strongly enough to feel."
-          </Text>
-        </View>
-
-        {/* Quick links */}
-        <View className="px-6 pt-12 flex-row gap-3">
-          <Link href="/schedule" asChild>
-            <Pressable
-              className="flex-1 bg-ink px-5 py-6 active:opacity-80"
-              accessibilityRole="link"
-              accessibilityLabel="This week's class schedule"
-            >
-              <Ionicons
-                name="calendar-outline"
-                size={20}
-                color="#F1E8DD"
-                accessibilityElementsHidden
-                importantForAccessibility="no"
-              />
-              <Text className="text-cream font-display text-lg mt-3">
-                This week
-              </Text>
-              <Text className="text-peach text-[10px] tracking-[0.28em] uppercase mt-1 font-bodyMd">
-                Reservations
-              </Text>
-            </Pressable>
-          </Link>
-          <Link href="/membership" asChild>
-            <Pressable
-              className="flex-1 bg-peach-200 px-5 py-6 active:opacity-80"
-              accessibilityRole="link"
-              accessibilityLabel="Membership packages and plans"
-            >
-              <Ionicons
-                name="pricetag-outline"
-                size={20}
-                color="#1F1F1F"
-                accessibilityElementsHidden
-                importantForAccessibility="no"
-              />
-              <Text className="text-ink font-display text-lg mt-3">
-                Membership
-              </Text>
-              <Text className="text-ink/70 text-[10px] tracking-[0.28em] uppercase mt-1 font-bodyMd">
-                Packages & plans
-              </Text>
-            </Pressable>
-          </Link>
-        </View>
-
-        {/* Footer line */}
-        <View className="px-6 pt-16 pb-4">
-          <Text
-            className="text-ink-2 text-[10px] tracking-[0.28em] uppercase font-bodyMd text-center"
-            accessibilityRole="text"
-          >
-            Patchogue · Sayville · honeypilates.com
-          </Text>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+      </View>
+    </ScrollView>
   );
 }
