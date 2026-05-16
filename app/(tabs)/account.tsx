@@ -108,56 +108,87 @@ function SignedInDashboard({ userId }: { userId: string }) {
 
   useEffect(() => {
     let live = true;
+    // Wrap every Supabase query in a 5s timeout race + try/catch so a
+    // single hung or errored query can't trap the dashboard in its
+    // loading state. Every error logs to the browser console so we
+    // can see exactly which query misbehaved.
+    const safe = async <T,>(label: string, q: PromiseLike<{ data: T | null; error: any }>): Promise<T | null> => {
+      try {
+        const race = await Promise.race([
+          q.then((r) => r),
+          new Promise<{ data: null; error: any }>((resolve) =>
+            setTimeout(() => resolve({ data: null, error: new Error('timed out') }), 5000),
+          ),
+        ]);
+        if (race.error) {
+          // eslint-disable-next-line no-console
+          console.error(`[dashboard:${label}] error:`, race.error);
+          return null;
+        }
+        // eslint-disable-next-line no-console
+        console.log(`[dashboard:${label}] ok`);
+        return race.data;
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error(`[dashboard:${label}] threw:`, e);
+        return null;
+      }
+    };
+
     (async () => {
+      // eslint-disable-next-line no-console
+      console.log('[dashboard] loading for user', userId);
       const [m, mem, p, up, re] = await Promise.all([
-        supabase.from('members')
-          .select('id,email,full_name,preferred_name,role,joined_at')
-          .eq('id', userId)
-          .single(),
-        supabase.from('memberships')
-          .select('id,plan_name,price_cents,status,current_period_end')
-          .eq('member_id', userId)
-          .eq('status', 'active')
-          .maybeSingle(),
-        supabase.from('class_packs')
-          .select('id,label,credits_total,credits_left,expires_at,status')
-          .eq('member_id', userId)
-          .eq('status', 'active')
-          .order('purchased_at', { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-        supabase.from('reservations')
-          .select(`id,status,
-                   class_session:class_sessions!inner(
-                     id, starts_at,
-                     class_type:class_types(name),
-                     instructor:members(preferred_name, full_name),
-                     location:studio_locations(name)
-                   )`)
-          .eq('member_id', userId)
-          .in('status', ['booked', 'waitlist'])
-          .gte('class_sessions.starts_at', new Date().toISOString())
-          .order('class_sessions(starts_at)', { ascending: true })
-          .limit(5),
-        supabase.from('reservations')
-          .select(`id,status,
-                   class_session:class_sessions!inner(
-                     id, starts_at,
-                     class_type:class_types(name),
-                     instructor:members(preferred_name, full_name),
-                     location:studio_locations(name)
-                   )`)
-          .eq('member_id', userId)
-          .in('status', ['attended', 'no_show'])
-          .order('class_sessions(starts_at)', { ascending: false })
-          .limit(3),
+        safe<Member>('members',
+          supabase.from('members')
+            .select('id,email,full_name,preferred_name,role,joined_at')
+            .eq('id', userId)
+            .single()),
+        safe<Membership>('membership',
+          supabase.from('memberships')
+            .select('id,plan_name,price_cents,status,current_period_end')
+            .eq('member_id', userId)
+            .eq('status', 'active')
+            .maybeSingle()),
+        safe<ClassPack>('pack',
+          supabase.from('class_packs')
+            .select('id,label,credits_total,credits_left,expires_at,status')
+            .eq('member_id', userId)
+            .eq('status', 'active')
+            .order('purchased_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()),
+        safe<ReservationRow[]>('upcoming',
+          supabase.from('reservations')
+            .select(`id,status,
+                     class_session:class_sessions!inner(
+                       id, starts_at,
+                       class_type:class_types(name),
+                       instructor:members(preferred_name, full_name),
+                       location:studio_locations(name)
+                     )`)
+            .eq('member_id', userId)
+            .in('status', ['booked', 'waitlist'])
+            .limit(5)),
+        safe<ReservationRow[]>('recent',
+          supabase.from('reservations')
+            .select(`id,status,
+                     class_session:class_sessions!inner(
+                       id, starts_at,
+                       class_type:class_types(name),
+                       instructor:members(preferred_name, full_name),
+                       location:studio_locations(name)
+                     )`)
+            .eq('member_id', userId)
+            .in('status', ['attended', 'no_show'])
+            .limit(3)),
       ]);
       if (!live) return;
-      setMember(m.data as Member | null);
-      setMembership(mem.data as Membership | null);
-      setPack(p.data as ClassPack | null);
-      setUpcoming((up.data ?? []) as ReservationRow[]);
-      setRecent((re.data ?? []) as ReservationRow[]);
+      setMember(m);
+      setMembership(mem);
+      setPack(p);
+      setUpcoming(up ?? []);
+      setRecent(re ?? []);
       setLoading(false);
     })();
     return () => { live = false; };
