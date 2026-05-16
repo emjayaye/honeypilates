@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 
 // ─── types ───────────────────────────────────────────────────────────
-type AdminSection = 'overview' | 'members' | 'schedule' | 'instructors' | 'plans' | 'reports' | 'settings';
+type AdminSection = 'overview' | 'members' | 'schedule' | 'instructors' | 'rewards' | 'messages' | 'plans' | 'reports' | 'settings';
 
 // ─── primitives shared with the dashboard editorial language ────────
 const Eyebrow = ({ children, tone = 'ink' }: { children: string; tone?: 'ink' | 'peach' | 'cream' }) => (
@@ -113,6 +113,8 @@ function AdminPanel() {
     { key: 'members',     label: 'Members' },
     { key: 'schedule',    label: 'Schedule' },
     { key: 'instructors', label: 'Instructors' },
+    { key: 'rewards',     label: 'Rewards' },
+    { key: 'messages',    label: 'Messages' },
     { key: 'plans',       label: 'Plans' },
     { key: 'reports',     label: 'Reports' },
     { key: 'settings',    label: 'Settings' },
@@ -138,6 +140,8 @@ function AdminPanel() {
           {section === 'members'     && <MembersSection />}
           {section === 'schedule'    && <ScheduleSection />}
           {section === 'instructors' && <InstructorsSection />}
+          {section === 'rewards'     && <RewardsSection />}
+          {section === 'messages'    && <MessagesSection />}
           {section === 'plans'       && <PlansSection />}
           {section === 'reports'     && <ReportsSection />}
           {section === 'settings'    && <SettingsSection />}
@@ -298,14 +302,116 @@ function OverviewSection() {
 }
 
 function MembersSection() {
+  const [members, setMembers] = useState<any[]>([]);
+  const [filter, setFilter] = useState('');
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const load = async () => {
+    const { data } = await supabase
+      .from('members')
+      .select('id, email, full_name, preferred_name, role, joined_at')
+      .order('joined_at', { ascending: false })
+      .limit(200);
+    setMembers(data ?? []);
+  };
+  useEffect(() => { load(); }, []);
+
+  const setRole = async (id: string, role: 'member' | 'instructor' | 'admin') => {
+    setBusyId(id);
+    await supabase.from('members').update({ role }).eq('id', id);
+    await load();
+    setBusyId(null);
+  };
+
+  const filtered = members.filter((m) => {
+    const q = filter.toLowerCase().trim();
+    if (!q) return true;
+    return (
+      (m.full_name ?? '').toLowerCase().includes(q) ||
+      (m.preferred_name ?? '').toLowerCase().includes(q) ||
+      (m.email ?? '').toLowerCase().includes(q)
+    );
+  });
+
   return (
     <>
       <SectionHero
         eyebrow="Members"
         title="The roster."
-        body="Search, filter, and edit anyone with a Honey Pilates login. Coming up next: search box, role toggle, plan editor."
+        body="Every Honey Pilates account. Use the role chip to promote an instructor or grant admin access."
       />
-      <View className="mt-10"><PlaceholderTable label="Member roster lands here" /></View>
+      <View className="mt-8">
+        <TextInput
+          value={filter}
+          onChangeText={setFilter}
+          placeholder="Search by name or email"
+          placeholderTextColor="#A89E89"
+          accessibilityLabel="Search members"
+          className="text-ink font-body text-base"
+          style={{
+            borderWidth: 1,
+            borderColor: '#E8DCC9',
+            backgroundColor: '#FFFFFF',
+            paddingHorizontal: 14,
+            paddingVertical: 10,
+          }}
+        />
+      </View>
+      <View className="mt-6 gap-2">
+        {filtered.length === 0 ? (
+          <PaperCard><Text className="text-ink-2 font-body italic text-sm">No members match.</Text></PaperCard>
+        ) : filtered.map((m) => {
+          const name = m.preferred_name ?? m.full_name ?? m.email;
+          const initials = (name?.split(/\s+/).map((p: string) => p[0]).join('').slice(0, 2) ?? '·').toUpperCase();
+          return (
+            <View
+              key={m.id}
+              className="p-5"
+              style={{
+                backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E8DCC9', borderRadius: 2,
+                flexDirection: 'row', flexWrap: 'wrap', gap: 12, alignItems: 'center', justifyContent: 'space-between',
+              }}
+            >
+              <View className="flex-row items-center gap-4" style={{ minWidth: 0, flexShrink: 1, flexGrow: 1, basis: 240 }}>
+                <View
+                  className="items-center justify-center"
+                  style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(235,195,161,0.18)', borderWidth: 1, borderColor: '#EBC3A1' }}
+                  accessibilityElementsHidden importantForAccessibility="no"
+                >
+                  <Text className="text-ink font-display italic text-base">{initials}</Text>
+                </View>
+                <View style={{ minWidth: 0, flex: 1 }}>
+                  <Text className="text-ink font-display italic text-lg leading-6" numberOfLines={1}>{name}</Text>
+                  <Text className="text-ink-2 font-body text-sm leading-6" numberOfLines={1}>
+                    {m.email} · joined {new Date(m.joined_at).toLocaleDateString()}
+                  </Text>
+                </View>
+              </View>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                {(['member', 'instructor', 'admin'] as const).map((r) => {
+                  const active = m.role === r;
+                  return (
+                    <Pressable
+                      key={r}
+                      onPress={() => !active && setRole(m.id, r)}
+                      disabled={active || busyId === m.id}
+                      className="px-3 py-2 active:opacity-60"
+                      style={{ borderWidth: 1, borderColor: active ? '#1F1F1F' : '#E8DCC9', opacity: busyId === m.id ? 0.5 : 1 }}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: active }}
+                      accessibilityLabel={`Set ${name} as ${r}`}
+                    >
+                      <Text className={(active ? 'text-ink ' : 'text-ink-2 ') + 'font-bodyMd text-[10px] tracking-[0.22em] uppercase'}>
+                        {r}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          );
+        })}
+      </View>
     </>
   );
 }
@@ -692,6 +798,198 @@ function ReportsSection() {
         body="Weekly attendance, recurring revenue, no-show rates, drop-off cohorts. Charts land in the next pass."
       />
       <View className="mt-10"><PlaceholderTable label="Charts + downloadable CSVs land here" /></View>
+    </>
+  );
+}
+
+function RewardsSection() {
+  const [rows, setRows] = useState<any[]>([]);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [showFulfilled, setShowFulfilled] = useState(false);
+
+  const load = async () => {
+    const { data } = await supabase
+      .from('member_milestones')
+      .select(`id, status, achieved_at, fulfilled_at, notes,
+               milestone:milestones(label, threshold, free_credits, merch_label, perks_json),
+               member:members(preferred_name, full_name, email)`)
+      .order('achieved_at', { ascending: false })
+      .limit(200);
+    setRows(data ?? []);
+  };
+  useEffect(() => { load(); }, []);
+
+  const fulfill = async (id: string) => {
+    setBusyId(id);
+    await supabase
+      .from('member_milestones')
+      .update({ status: 'fulfilled', fulfilled_at: new Date().toISOString() })
+      .eq('id', id);
+    await load();
+    setBusyId(null);
+  };
+
+  const visible = rows.filter((r) => showFulfilled || r.status === 'earned');
+
+  return (
+    <>
+      <SectionHero
+        eyebrow="Rewards"
+        title="Honors fulfillment."
+        body="Members who've crossed a milestone and are owed merch, perks, or recognition. Mark fulfilled once you've handed off the gift."
+      />
+
+      <View className="mt-8 flex-row flex-wrap gap-2">
+        <Pressable
+          onPress={() => setShowFulfilled(false)}
+          className="px-3 py-2 active:opacity-60"
+          style={{ borderWidth: 1, borderColor: !showFulfilled ? '#1F1F1F' : '#E8DCC9' }}
+          accessibilityRole="button"
+          accessibilityState={{ selected: !showFulfilled }}
+        >
+          <Text className={(!showFulfilled ? 'text-ink ' : 'text-ink-2 ') + 'font-bodyMd text-[10px] tracking-[0.22em] uppercase'}>
+            Pending
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={() => setShowFulfilled(true)}
+          className="px-3 py-2 active:opacity-60"
+          style={{ borderWidth: 1, borderColor: showFulfilled ? '#1F1F1F' : '#E8DCC9' }}
+          accessibilityRole="button"
+          accessibilityState={{ selected: showFulfilled }}
+        >
+          <Text className={(showFulfilled ? 'text-ink ' : 'text-ink-2 ') + 'font-bodyMd text-[10px] tracking-[0.22em] uppercase'}>
+            Show all
+          </Text>
+        </Pressable>
+      </View>
+
+      <View className="mt-6 gap-2">
+        {visible.length === 0 ? (
+          <PaperCard><Text className="text-ink-2 font-body italic text-sm">No pending honors right now.</Text></PaperCard>
+        ) : visible.map((r) => {
+          const member = r.member?.preferred_name ?? r.member?.full_name ?? r.member?.email ?? 'member';
+          const ms = r.milestone;
+          const isFulfilled = r.status === 'fulfilled';
+          return (
+            <View
+              key={r.id}
+              className="p-5"
+              style={{
+                backgroundColor: '#FFFFFF', borderWidth: 1,
+                borderColor: isFulfilled ? '#E8DCC9' : '#EBC3A1',
+                borderRadius: 2,
+                flexDirection: 'row', flexWrap: 'wrap', gap: 12, alignItems: 'center', justifyContent: 'space-between',
+              }}
+            >
+              <View style={{ minWidth: 0, flexShrink: 1, flexGrow: 1, basis: 240 }}>
+                <Text className="text-ink-2 text-[10px] tracking-[0.28em] uppercase font-bodyMd">
+                  {new Date(r.achieved_at).toLocaleDateString()} · {ms?.label}
+                </Text>
+                <Text className="text-ink font-display italic text-lg leading-6 mt-1">
+                  {member}
+                </Text>
+                <Text className="text-ink-2 font-body text-sm leading-6 mt-1">
+                  Reached {ms?.threshold} classes.
+                  {ms?.merch_label && ` · Gift: ${ms.merch_label}`}
+                  {ms?.free_credits > 0 && ` · ${ms.free_credits} free credit${ms.free_credits === 1 ? '' : 's'}`}
+                </Text>
+              </View>
+              {isFulfilled ? (
+                <Text className="text-peach-700 font-bodyBold tracking-[0.22em] uppercase text-[10px]">
+                  Fulfilled ✓
+                </Text>
+              ) : (
+                <Pressable
+                  onPress={() => fulfill(r.id)}
+                  disabled={busyId === r.id}
+                  className="bg-ink px-4 py-2 active:opacity-80"
+                  accessibilityRole="button"
+                  accessibilityLabel={`Mark ${ms?.label} fulfilled for ${member}`}
+                >
+                  <Text className="text-cream font-bodyBold tracking-[0.22em] uppercase text-[10px]">
+                    {busyId === r.id ? '…' : 'Mark fulfilled'}
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+          );
+        })}
+      </View>
+    </>
+  );
+}
+
+function MessagesSection() {
+  const [rows, setRows] = useState<any[]>([]);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const load = async () => {
+    const { data } = await supabase
+      .from('contact_messages')
+      .select('id, name, email, topic, preferred_location, message, source_page, responded_at, created_at')
+      .order('created_at', { ascending: false })
+      .limit(100);
+    setRows(data ?? []);
+  };
+  useEffect(() => { load(); }, []);
+
+  const markResponded = async (id: string) => {
+    setBusyId(id);
+    await supabase.from('contact_messages').update({ responded_at: new Date().toISOString() }).eq('id', id);
+    await load();
+    setBusyId(null);
+  };
+
+  return (
+    <>
+      <SectionHero
+        eyebrow="Messages"
+        title="Inbox."
+        body="Notes from the public contact form. Reply by email and tap Mark replied once you've sent it."
+      />
+      <View className="mt-8 gap-2">
+        {rows.length === 0 ? (
+          <PaperCard><Text className="text-ink-2 font-body italic text-sm">No messages yet.</Text></PaperCard>
+        ) : rows.map((r) => (
+          <View
+            key={r.id}
+            className="p-5"
+            style={{
+              backgroundColor: '#FFFFFF', borderWidth: 1,
+              borderColor: r.responded_at ? '#E8DCC9' : '#EBC3A1',
+              borderRadius: 2,
+            }}
+          >
+            <View className="flex-row flex-wrap items-center justify-between gap-2">
+              <Text className="text-ink-2 text-[10px] tracking-[0.28em] uppercase font-bodyMd">
+                {new Date(r.created_at).toLocaleString()}
+                {r.topic && ` · ${r.topic}`}
+                {r.preferred_location && ` · ${r.preferred_location}`}
+              </Text>
+              {r.responded_at ? (
+                <Text className="text-peach-700 font-bodyBold tracking-[0.22em] uppercase text-[10px]">Replied ✓</Text>
+              ) : (
+                <Pressable
+                  onPress={() => markResponded(r.id)}
+                  disabled={busyId === r.id}
+                  className="bg-ink px-3 py-1.5 active:opacity-80"
+                  accessibilityRole="button"
+                  accessibilityLabel={`Mark message from ${r.name} replied`}
+                >
+                  <Text className="text-cream font-bodyBold tracking-[0.22em] uppercase text-[10px]">
+                    {busyId === r.id ? '…' : 'Mark replied'}
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+            <Text className="text-ink font-display italic text-lg leading-6 mt-2">
+              {r.name} <Text className="text-ink-2 font-body text-sm">· {r.email}</Text>
+            </Text>
+            <Text className="text-ink-2 font-body text-[15px] leading-7 mt-2">{r.message}</Text>
+          </View>
+        ))}
+      </View>
     </>
   );
 }
