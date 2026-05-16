@@ -5,6 +5,7 @@ import {
   Text,
   Pressable,
   ActivityIndicator,
+  ImageBackground,
   useWindowDimensions,
 } from 'react-native';
 import { Link } from 'expo-router';
@@ -50,6 +51,12 @@ type ReservationRow = {
 };
 type Section = 'overview' | 'bookings' | 'packages' | 'profile' | 'admin';
 
+// Editorial photography — used across the dashboard's cinematic moments.
+const HERO_IMG =
+  'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=1800&h=900&fit=crop&q=85';
+const NEXT_CLASS_IMG =
+  'https://images.unsplash.com/photo-1599447421416-3414500d18a5?w=1400&h=900&fit=crop&q=85';
+
 // ─── formatting ─────────────────────────────────────────────────────
 const fmtDate = (iso: string) =>
   new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
@@ -63,33 +70,93 @@ const initialsFor = (m: Member | null, fallback: string) => {
   if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
   return (parts[0]?.slice(0, 2) ?? '·').toUpperCase();
 };
+const timeOfDayGreeting = () => {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 17) return 'Good afternoon';
+  return 'Good evening';
+};
 
 // ─── primitives ─────────────────────────────────────────────────────
-const Eyebrow = ({ children }: { children: string }) => (
-  <Text className="text-ink-2 text-[10px] tracking-[0.32em] uppercase font-bodyMd">{children}</Text>
+const Eyebrow = ({ children, tone = 'ink' }: { children: string; tone?: 'ink' | 'peach' | 'cream' }) => (
+  <Text
+    className={
+      (tone === 'peach' ? 'text-peach ' : tone === 'cream' ? 'text-cream/80 ' : 'text-ink-2 ') +
+      'text-[10px] tracking-[0.36em] uppercase font-bodyMd'
+    }
+  >
+    {children}
+  </Text>
 );
-const Meta = ({ children }: { children: React.ReactNode }) => (
-  <Text className="text-ink-2 font-body text-sm leading-6">{children}</Text>
+const Body = ({ children }: { children: React.ReactNode }) => (
+  <Text className="text-ink-2 font-body text-[15px] leading-7">{children}</Text>
 );
-const CardTitle = ({ children }: { children: string }) => (
-  <Text className="text-ink font-display text-2xl leading-7">{children}</Text>
-);
-const Card = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
+const HairlineRule = ({ tone = 'ink' }: { tone?: 'ink' | 'peach' | 'cream' }) => (
   <View
-    className={'p-6 ' + className}
-    style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E8DCC9', borderRadius: 4 }}
+    style={{
+      height: 1,
+      width: 56,
+      backgroundColor: tone === 'peach' ? '#EBC3A1' : tone === 'cream' ? 'rgba(241,232,221,0.6)' : 'rgba(31,31,31,0.35)',
+      marginTop: 18,
+      marginBottom: 22,
+    }}
+    accessibilityElementsHidden
+    importantForAccessibility="no"
+  />
+);
+
+// Editorial section header used on Bookings / Packages / Profile / Studio.
+const SectionHero = ({ eyebrow, title, body }: { eyebrow: string; title: string; body?: string }) => (
+  <View className="mb-2">
+    <Eyebrow>{eyebrow}</Eyebrow>
+    <Text
+      className="text-ink font-display italic text-[44px] mt-3 leading-[48px]"
+      accessibilityRole="header"
+      // @ts-expect-error
+      aria-level={1}
+    >
+      {title}
+    </Text>
+    <HairlineRule tone="peach" />
+    {body ? <Body>{body}</Body> : null}
+  </View>
+);
+
+// Refined card — no shadow, hairline border, generous padding. Used
+// sparingly so it reads as paper, not as a UI chassis.
+const PaperCard = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
+  <View
+    className={'p-7 ' + className}
+    style={{
+      backgroundColor: '#FFFFFF',
+      borderWidth: 1,
+      borderColor: '#E8DCC9',
+      borderRadius: 2,
+    }}
   >
     {children}
   </View>
 );
-const GhostButton = ({ label, href }: { label: string; href: string }) => (
+
+const PrimaryLink = ({ label, href }: { label: string; href: string }) => (
   <Link href={href as any} asChild>
     <Pressable
-      className="border border-ink px-6 py-3.5 active:bg-ink/5 self-start"
+      className="bg-ink px-7 py-3.5 active:opacity-80 self-start"
       accessibilityRole="link"
       accessibilityLabel={label}
     >
-      <Text className="text-ink font-bodyBold tracking-[0.18em] uppercase text-xs">{label}</Text>
+      <Text className="text-cream font-bodyBold tracking-[0.22em] uppercase text-[11px]">{label}</Text>
+    </Pressable>
+  </Link>
+);
+const GhostLink = ({ label, href }: { label: string; href: string }) => (
+  <Link href={href as any} asChild>
+    <Pressable
+      className="border border-ink px-7 py-3.5 active:bg-ink/5 self-start"
+      accessibilityRole="link"
+      accessibilityLabel={label}
+    >
+      <Text className="text-ink font-bodyBold tracking-[0.22em] uppercase text-[11px]">{label}</Text>
     </Pressable>
   </Link>
 );
@@ -112,7 +179,7 @@ function FullPageLoader() {
 // ─── dashboard shell ────────────────────────────────────────────────
 function SignedInDashboard({ userId, userEmail }: { userId: string; userEmail: string }) {
   const { width } = useWindowDimensions();
-  const isWide = width >= 900;
+  const isWide = width >= 960;
   const [section, setSection] = useState<Section>('overview');
 
   const [member, setMember] = useState<Member | null>(null);
@@ -135,7 +202,6 @@ function SignedInDashboard({ userId, userEmail }: { userId: string; userEmail: s
         return race.data;
       } catch (e) { console.error(`[dashboard:${label}] threw`, e); return null; }
     };
-
     (async () => {
       const [m, mem, p, up, re] = await Promise.all([
         safe<Member>('members',
@@ -172,22 +238,29 @@ function SignedInDashboard({ userId, userEmail }: { userId: string; userEmail: s
 
   const isOwner = member?.role === 'admin';
   const isInstructorOrAdmin = member?.role === 'instructor' || isOwner;
-  const sections: { key: Section; label: string; icon: keyof typeof Ionicons.glyphMap }[] = useMemo(() => {
-    const base: { key: Section; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-      { key: 'overview', label: 'Overview',  icon: 'home-outline' },
-      { key: 'bookings', label: 'Bookings',  icon: 'calendar-outline' },
-      { key: 'packages', label: 'Packages',  icon: 'pricetag-outline' },
-      { key: 'profile',  label: 'Profile',   icon: 'person-circle-outline' },
+  const sections: { key: Section; label: string }[] = useMemo(() => {
+    const base: { key: Section; label: string }[] = [
+      { key: 'overview', label: 'Overview' },
+      { key: 'bookings', label: 'Bookings' },
+      { key: 'packages', label: 'Plan' },
+      { key: 'profile',  label: 'Profile' },
     ];
-    if (isInstructorOrAdmin) base.push({ key: 'admin', label: 'Studio', icon: 'briefcase-outline' });
+    if (isInstructorOrAdmin) base.push({ key: 'admin', label: 'Studio' });
     return base;
   }, [isInstructorOrAdmin]);
 
   return (
-    <ScrollView contentContainerClassName="bg-cream pb-16">
+    <ScrollView contentContainerClassName="bg-cream pb-24">
       <View
-        className="pt-8 px-6"
-        style={{ maxWidth: 1200, alignSelf: 'center', width: '100%', flexDirection: isWide ? 'row' : 'column', gap: isWide ? 32 : 12 }}
+        style={{
+          maxWidth: 1240,
+          alignSelf: 'center',
+          width: '100%',
+          flexDirection: isWide ? 'row' : 'column',
+          paddingHorizontal: isWide ? 40 : 24,
+          paddingTop: isWide ? 32 : 20,
+          gap: isWide ? 48 : 16,
+        }}
       >
         <MemberSidebar
           member={member}
@@ -229,7 +302,7 @@ function MemberSidebar({
   isWide: boolean;
   section: Section;
   setSection: (s: Section) => void;
-  sections: { key: Section; label: string; icon: keyof typeof Ionicons.glyphMap }[];
+  sections: { key: Section; label: string }[];
 }) {
   const initials = initialsFor(member, userEmail);
   const fullName = member?.preferred_name ?? member?.full_name ?? userEmail;
@@ -239,71 +312,91 @@ function MemberSidebar({
   return (
     <View
       style={{
-        width: isWide ? 240 : '100%',
+        width: isWide ? 232 : '100%',
         flexShrink: 0,
       }}
     >
-      {/* Profile chip */}
-      <View
-        className="p-5"
-        style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E8DCC9', borderRadius: 4 }}
-      >
-        <View className="flex-row items-center gap-3">
-          <View
-            className="bg-peach items-center justify-center"
-            style={{ width: 44, height: 44, borderRadius: 22 }}
-            accessibilityElementsHidden
-            importantForAccessibility="no"
+      {/* Profile mark — peach ring around initials, name + role beneath. */}
+      <View className={isWide ? '' : 'flex-row items-center gap-4'}>
+        <View
+          className="items-center justify-center"
+          style={{
+            width: 72,
+            height: 72,
+            borderRadius: 36,
+            borderWidth: 1,
+            borderColor: '#EBC3A1',
+            backgroundColor: 'rgba(235,195,161,0.18)',
+          }}
+          accessibilityElementsHidden
+          importantForAccessibility="no"
+        >
+          <Text className="text-ink font-display text-xl">{initials}</Text>
+        </View>
+        <View className={isWide ? 'mt-5' : 'flex-1'} style={{ minWidth: 0 }}>
+          <Text
+            className="text-ink font-display text-xl leading-6"
+            numberOfLines={1}
+            accessibilityRole="text"
           >
-            <Text className="text-ink font-display text-base">{initials}</Text>
-          </View>
-          <View className="flex-1" style={{ minWidth: 0 }}>
-            <Text
-              className="text-ink font-display text-base leading-5"
-              numberOfLines={1}
-              accessibilityRole="text"
-            >
-              {fullName}
-            </Text>
-            <Text className="text-ink-2 text-[10px] tracking-[0.24em] uppercase font-bodyMd mt-0.5">
+            {fullName}
+          </Text>
+          <View className="flex-row items-center gap-2 mt-1.5">
+            <Text className="text-ink-2 text-[10px] tracking-[0.28em] uppercase font-bodyMd">
               {isOwner ? 'Owner' : 'Member'}
             </Text>
+            {isOwner && (
+              <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: '#EBC3A1' }} />
+            )}
           </View>
         </View>
       </View>
 
-      {/* Nav */}
+      {/* Nav — vertical text list on desktop, horizontal chips on mobile. */}
       <View
-        className="mt-3"
+        className={isWide ? 'mt-8' : 'mt-5'}
         style={{
           flexDirection: isWide ? 'column' : 'row',
           flexWrap: isWide ? 'nowrap' : 'wrap',
-          gap: isWide ? 0 : 6,
+          gap: isWide ? 0 : 8,
         }}
         accessibilityRole={'tablist' as any}
         accessibilityLabel="Account sections"
       >
         {sections.map((s) => {
           const active = section === s.key;
+          if (isWide) {
+            return (
+              <Pressable
+                key={s.key}
+                onPress={() => setSection(s.key)}
+                className="py-3 active:opacity-60"
+                style={{ borderLeftWidth: 2, borderLeftColor: active ? '#1F1F1F' : 'transparent', paddingLeft: 14 }}
+                accessibilityRole={'tab' as any}
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={s.label}
+              >
+                <Text
+                  className={
+                    (active ? 'text-ink ' : 'text-ink-2 ') +
+                    'font-bodyMd text-[12px] tracking-[0.22em] uppercase'
+                  }
+                >
+                  {s.label}
+                </Text>
+              </Pressable>
+            );
+          }
           return (
             <Pressable
               key={s.key}
               onPress={() => setSection(s.key)}
-              className="flex-row items-center gap-3 active:opacity-70"
-              style={{
-                paddingVertical: 12,
-                paddingHorizontal: 14,
-                backgroundColor: active ? '#FFFFFF' : 'transparent',
-                borderWidth: 1,
-                borderColor: active ? '#E8DCC9' : 'transparent',
-                borderRadius: 4,
-                marginTop: isWide ? 2 : 0,
-              }}
+              className="px-4 py-2 active:opacity-60"
+              style={{ borderWidth: 1, borderColor: active ? '#1F1F1F' : '#E8DCC9' }}
               accessibilityRole={'tab' as any}
               accessibilityState={{ selected: active }}
               accessibilityLabel={s.label}
             >
-              <Ionicons name={s.icon} size={18} color={active ? '#1F1F1F' : '#777C75'} accessibilityElementsHidden importantForAccessibility="no" />
               <Text
                 className={
                   (active ? 'text-ink ' : 'text-ink-2 ') +
@@ -318,23 +411,39 @@ function MemberSidebar({
       </View>
 
       {isWide && (
-        <Pressable
-          onPress={signOut}
-          className="mt-6 active:opacity-60"
-          style={{ paddingVertical: 12, paddingHorizontal: 14 }}
-          accessibilityRole="button"
-          accessibilityLabel="Sign out of member access"
-        >
-          <Text className="text-ink-2 font-bodyMd text-[11px] tracking-[0.22em] uppercase">
-            Sign out
-          </Text>
-        </Pressable>
+        <>
+          <View
+            style={{ height: 1, backgroundColor: 'rgba(31,31,31,0.12)', marginTop: 32, marginBottom: 16 }}
+            accessibilityElementsHidden
+            importantForAccessibility="no"
+          />
+          <Pressable
+            onPress={signOut}
+            className="py-2 active:opacity-60"
+            style={{ paddingLeft: 16 }}
+            accessibilityRole="button"
+            accessibilityLabel="Sign out of member access"
+          >
+            <Text className="text-ink-2 font-bodyMd text-[11px] tracking-[0.22em] uppercase">
+              Sign out
+            </Text>
+          </Pressable>
+
+          {/* Quiet brand mark at the bottom of the rail — boutique
+              wayfinding without competing with the top header. */}
+          <View style={{ marginTop: 64 }}>
+            <Text className="text-ink-2 font-display italic text-base">honey</Text>
+            <Text className="text-ink-2 text-[10px] tracking-[0.4em] uppercase font-bodyMd mt-1">
+              Pilates · NY
+            </Text>
+          </View>
+        </>
       )}
     </View>
   );
 }
 
-// ─── sections ───────────────────────────────────────────────────────
+// ─── OVERVIEW ───────────────────────────────────────────────────────
 function OverviewSection({
   member, membership, pack, upcoming, recent, isOwner, userEmail,
 }: {
@@ -349,277 +458,363 @@ function OverviewSection({
   const displayName =
     member?.preferred_name ?? member?.full_name?.split(' ')[0] ?? userEmail.split('@')[0];
   const nextRes = upcoming[0];
-  const memberSince = member?.joined_at
-    ? new Date(member.joined_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-    : null;
 
   return (
     <>
-      {/* Big greeting block */}
+      {/* Editorial greeting */}
       <View>
-        <Eyebrow>{isOwner ? 'Owner Dashboard' : 'Welcome'}</Eyebrow>
+        <Eyebrow>{isOwner ? 'Studio Owner' : timeOfDayGreeting()}</Eyebrow>
         <Text
-          className="text-ink font-display text-[44px] mt-3 leading-[48px]"
+          className="text-ink font-display italic text-[56px] mt-3 leading-[60px]"
           accessibilityRole="header"
           // @ts-expect-error
           aria-level={1}
         >
-          Good day, {displayName}.
+          {timeOfDayGreeting()}, {displayName}.
         </Text>
-        <Meta>
-          {memberSince ? `Member since ${memberSince}` : userEmail}
-          {upcoming.length > 0 && ` · ${upcoming.length} class${upcoming.length === 1 ? '' : 'es'} on the books`}
-        </Meta>
+        <HairlineRule tone="peach" />
+        <Body>
+          {nextRes
+            ? `You're on the calendar ${fmtDate(nextRes.class_session.starts_at)} at ${fmtTime(nextRes.class_session.starts_at)} with ${nextRes.class_session.instructor?.preferred_name ?? nextRes.class_session.instructor?.full_name ?? 'staff'}.`
+            : 'Your reformer is waiting — book a class when you’re ready.'}
+        </Body>
       </View>
 
-      {/* Stat strip — 3 tiny tiles giving a sense of momentum. */}
-      <View className="mt-8" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-        <StatTile label="Upcoming" value={upcoming.length} />
-        <StatTile
-          label="Credits left"
-          value={pack ? `${pack.credits_left}/${pack.credits_total}` : '—'}
-        />
-        <StatTile
-          label="Last 30 days"
-          value={recent.length}
-        />
+      {/* Cinematic next-class hero — photographic background, ink scrim. */}
+      <View className="mt-12">
+        {nextRes ? <NextClassPoster res={nextRes} /> : <EmptyPoster />}
       </View>
 
-      {/* Owner-only overview */}
-      {isOwner && <OwnerOverviewPanel />}
-
-      {/* Next class — hero ticket */}
-      <View className="mt-10">
-        <View className="flex-row items-end justify-between mb-3">
-          <Eyebrow>Next on the calendar</Eyebrow>
-          <Link href="/schedule" asChild>
-            <Pressable className="py-3 -my-3 active:opacity-60" accessibilityRole="link" accessibilityLabel="Open the full class schedule">
-              <Text className="text-ink font-bodyBold text-xs tracking-[0.18em] uppercase underline">
-                Full schedule →
-              </Text>
-            </Pressable>
-          </Link>
-        </View>
-        {nextRes ? <NextClassHero res={nextRes} /> : <EmptyNext />}
-      </View>
-
-      {/* Plan + credits side-by-side */}
-      <View className="mt-10" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
-        {membership ? <MembershipCard m={membership} /> : null}
-        {pack ? <PackCard p={pack} /> : null}
+      {/* Concierge cards — plan + pack as tall paired panels. */}
+      <View className="mt-12" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 18 }}>
+        {membership ? <ConciergeMembership m={membership} /> : null}
+        {pack ? <ConciergePack p={pack} /> : null}
         {!membership && !pack ? <EmptyPlan /> : null}
       </View>
 
-      {/* More upcoming */}
-      {upcoming.length > 1 && (
-        <View className="mt-10">
-          <Eyebrow>Also coming up</Eyebrow>
-          <View className="mt-3 gap-2">
-            {upcoming.slice(1).map((r) => <ReservationRowCard key={r.id} res={r} />)}
-          </View>
+      {/* Owner-only studio strip — sits below the personal section so
+          the member ritual still leads. */}
+      {isOwner && (
+        <View className="mt-14">
+          <Eyebrow>Studio</Eyebrow>
+          <Text
+            className="text-ink font-display italic text-3xl mt-3 leading-9"
+            accessibilityRole="header"
+            // @ts-expect-error
+            aria-level={2}
+          >
+            At a glance.
+          </Text>
+          <HairlineRule />
+          <OwnerOverviewPanel />
         </View>
       )}
 
-      {/* Recent */}
-      {recent.length > 0 && (
-        <View className="mt-10">
-          <Eyebrow>Recent visits</Eyebrow>
-          <View
-            className="mt-3"
-            style={{ borderTopWidth: 1, borderTopColor: '#E8DCC9' }}
+      {/* Also coming up — refined list */}
+      {upcoming.length > 1 && (
+        <View className="mt-14">
+          <Eyebrow>Also coming up</Eyebrow>
+          <Text
+            className="text-ink font-display italic text-3xl mt-3 leading-9"
+            accessibilityRole="header"
+            // @ts-expect-error
+            aria-level={2}
           >
-            {recent.map((h) => (
-              <View
-                key={h.id}
-                className="flex-row items-center justify-between py-4"
-                style={{ borderBottomWidth: 1, borderBottomColor: '#E8DCC9' }}
-              >
-                <View className="flex-row items-center gap-3">
-                  <View
-                    className="bg-cream"
-                    style={{ width: 30, height: 30, borderRadius: 15, borderWidth: 1, borderColor: '#E8DCC9', alignItems: 'center', justifyContent: 'center' }}
-                    accessibilityElementsHidden
-                    importantForAccessibility="no"
-                  >
-                    <Ionicons name="checkmark" size={14} color="#1F1F1F" />
-                  </View>
-                  <View>
-                    <Text className="text-ink font-display text-base leading-6">
-                      {h.class_session.class_type.name}
-                    </Text>
-                    <Meta>
-                      {h.class_session.instructor
-                        ? `With ${h.class_session.instructor.preferred_name ?? h.class_session.instructor.full_name}`
-                        : ''}
-                    </Meta>
-                  </View>
-                </View>
-                <Text className="text-ink-2 text-[10px] tracking-[0.28em] uppercase font-bodyMd">
-                  {fmtDate(h.class_session.starts_at)}
-                </Text>
-              </View>
-            ))}
-          </View>
+            Your week ahead.
+          </Text>
+          <HairlineRule />
+          <ReservationTimeline items={upcoming.slice(1)} />
+        </View>
+      )}
+
+      {/* Recent visits — quiet timeline */}
+      {recent.length > 0 && (
+        <View className="mt-14">
+          <Eyebrow>Recent visits</Eyebrow>
+          <Text
+            className="text-ink font-display italic text-3xl mt-3 leading-9"
+            accessibilityRole="header"
+            // @ts-expect-error
+            aria-level={2}
+          >
+            Where you’ve been.
+          </Text>
+          <HairlineRule />
+          <ReservationTimeline items={recent} variant="history" />
         </View>
       )}
     </>
   );
 }
 
-function StatTile({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <View
-      className="p-4 grow basis-[140px]"
-      style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E8DCC9', borderRadius: 4 }}
-    >
-      <Eyebrow>{label}</Eyebrow>
-      <Text className="text-ink font-display text-3xl mt-2 leading-9">{value}</Text>
-    </View>
-  );
-}
-
-function NextClassHero({ res }: { res: ReservationRow }) {
+// ─── posters / cards ────────────────────────────────────────────────
+function NextClassPoster({ res }: { res: ReservationRow }) {
   const s = res.class_session;
   const instructorName = s.instructor?.preferred_name ?? s.instructor?.full_name ?? 'staff';
   return (
-    <View
-      className="p-6 overflow-hidden"
-      style={{
-        backgroundColor: '#1F1F1F',
-        borderRadius: 4,
-        borderWidth: 1,
-        borderColor: '#1F1F1F',
-      }}
+    <ImageBackground
+      source={{ uri: NEXT_CLASS_IMG }}
+      style={{ borderRadius: 2, overflow: 'hidden', minHeight: 360 }}
+      imageStyle={{ borderRadius: 2 }}
+      accessible={false}
     >
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 24, alignItems: 'center' }}>
-        {/* Ticket date column */}
-        <View
-          className="px-5 py-4"
-          style={{
-            backgroundColor: '#F1E8DD',
-            borderRadius: 4,
-            minWidth: 130,
-          }}
-        >
-          <Text className="text-ink-2 text-[10px] tracking-[0.28em] uppercase font-bodyMd">
-            {fmtDate(s.starts_at)}
-          </Text>
-          <Text className="text-ink font-display text-3xl mt-1 leading-9">{fmtTime(s.starts_at)}</Text>
-        </View>
-        <View className="grow basis-[200px]">
-          <Text className="text-peach text-[10px] tracking-[0.32em] uppercase font-bodyMd">
-            Your seat is held
-          </Text>
-          <Text className="text-cream font-display text-2xl mt-2 leading-7">
+      {/* Layered scrim — softer gradient feel via two stacked ink layers. */}
+      <View
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(31,31,31,0.55)' }}
+        pointerEvents="none"
+        accessibilityElementsHidden
+        importantForAccessibility="no"
+      />
+      <View
+        style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '60%', backgroundColor: 'rgba(31,31,31,0.35)' }}
+        pointerEvents="none"
+        accessibilityElementsHidden
+        importantForAccessibility="no"
+      />
+      <View className="p-9" style={{ minHeight: 360, justifyContent: 'space-between' }}>
+        <View>
+          <Eyebrow tone="peach">Your reservation</Eyebrow>
+          <Text
+            className="text-cream font-display italic text-[40px] mt-3 leading-[44px]"
+            accessibilityRole="header"
+            // @ts-expect-error
+            aria-level={2}
+          >
             {s.class_type.name}
           </Text>
-          <Text className="text-cream/85 font-body text-sm leading-6 mt-1">
-            With {instructorName} · {s.location.name}
+          <Text className="text-cream/85 font-body text-base leading-7 mt-3">
+            With {instructorName} at the {s.location.name}.
           </Text>
         </View>
-        <View className="flex-row gap-3 flex-wrap">
+
+        <View
+          className="flex-row flex-wrap items-end justify-between mt-6"
+          style={{ gap: 18 }}
+        >
+          <View>
+            <Text className="text-peach text-[10px] tracking-[0.32em] uppercase font-bodyMd">
+              {fmtDate(s.starts_at)}
+            </Text>
+            <Text className="text-cream font-display text-[52px] mt-1 leading-[56px]">
+              {fmtTime(s.starts_at)}
+            </Text>
+          </View>
+          <View className="flex-row gap-3">
+            <Link href="/schedule" asChild>
+              <Pressable
+                className="bg-cream px-7 py-3.5 active:opacity-80"
+                accessibilityRole="link"
+                accessibilityLabel={`Open details for ${s.class_type.name}`}
+              >
+                <Text className="text-ink font-bodyBold tracking-[0.22em] uppercase text-[11px]">
+                  View details
+                </Text>
+              </Pressable>
+            </Link>
+          </View>
+        </View>
+      </View>
+    </ImageBackground>
+  );
+}
+
+function EmptyPoster() {
+  return (
+    <ImageBackground
+      source={{ uri: HERO_IMG }}
+      style={{ borderRadius: 2, overflow: 'hidden', minHeight: 320 }}
+      imageStyle={{ borderRadius: 2 }}
+      accessible={false}
+    >
+      <View
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(31,31,31,0.55)' }}
+        pointerEvents="none"
+        accessibilityElementsHidden
+        importantForAccessibility="no"
+      />
+      <View className="p-9" style={{ minHeight: 320, justifyContent: 'flex-end' }}>
+        <Eyebrow tone="peach">No reservation</Eyebrow>
+        <Text
+          className="text-cream font-display italic text-[36px] mt-3 leading-[40px]"
+          accessibilityRole="header"
+          // @ts-expect-error
+          aria-level={2}
+        >
+          Reserve your reformer.
+        </Text>
+        <View className="mt-5">
           <Link href="/schedule" asChild>
             <Pressable
-              className="bg-cream px-6 py-3.5 active:opacity-80"
+              className="bg-cream px-7 py-3.5 active:opacity-80 self-start"
               accessibilityRole="link"
-              accessibilityLabel={`Open details for ${s.class_type.name}`}
+              accessibilityLabel="Browse the class schedule"
             >
-              <Text className="text-ink font-bodyBold tracking-[0.18em] uppercase text-xs">
-                View details
+              <Text className="text-ink font-bodyBold tracking-[0.22em] uppercase text-[11px]">
+                Browse schedule
               </Text>
             </Pressable>
           </Link>
         </View>
       </View>
+    </ImageBackground>
+  );
+}
+
+function ConciergeMembership({ m }: { m: Membership }) {
+  return (
+    <View
+      className="p-8 grow basis-[300px]"
+      style={{
+        backgroundColor: '#FFFFFF',
+        borderWidth: 1,
+        borderColor: '#E8DCC9',
+        borderRadius: 2,
+        minHeight: 280,
+        justifyContent: 'space-between',
+      }}
+    >
+      <View>
+        <Eyebrow>Membership</Eyebrow>
+        <Text className="text-ink font-display italic text-[28px] mt-3 leading-8">
+          {m.plan_name}
+        </Text>
+        <HairlineRule />
+        <Text className="text-ink font-display text-[44px] leading-[48px]">
+          {dollars(m.price_cents)}
+          <Text className="text-ink-2 font-body text-base"> /mo</Text>
+        </Text>
+        {m.current_period_end ? (
+          <Text className="text-ink-2 font-body text-sm mt-2">
+            Renews {fmtDate(m.current_period_end)}
+          </Text>
+        ) : null}
+      </View>
+      <View className="mt-6 flex-row items-center justify-between gap-3 flex-wrap">
+        <View className="flex-row items-center gap-2">
+          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#5C6E4F' }} />
+          <Text className="text-ink-2 text-[10px] tracking-[0.28em] uppercase font-bodyMd">
+            {m.status === 'active' ? 'Active' : m.status}
+          </Text>
+        </View>
+        <GhostLink label="Manage" href="/membership" />
+      </View>
     </View>
   );
 }
 
-function EmptyNext() {
+function ConciergePack({ p }: { p: ClassPack }) {
+  const pct = (p.credits_left / p.credits_total) * 100;
   return (
-    <Card>
-      <Meta>Nothing booked yet — reserve a class to see it here.</Meta>
-      <View className="mt-4"><GhostButton label="Browse schedule" href="/schedule" /></View>
-    </Card>
-  );
-}
-
-function MembershipCard({ m }: { m: Membership }) {
-  return (
-    <Card className="grow basis-[300px]">
-      <Eyebrow>Plan</Eyebrow>
-      <View className="mt-3"><CardTitle>{m.plan_name}</CardTitle></View>
-      <Meta>
-        {dollars(m.price_cents)}/month
-        {m.current_period_end && ` · renews ${fmtDate(m.current_period_end)}`}
-      </Meta>
-      <View className="mt-5">
-        <View className="bg-peach/40 px-3 py-1.5 self-start">
-          <Text className="text-ink text-[10px] tracking-[0.22em] uppercase font-bodyBold">
-            {m.status === 'active' ? 'Active' : m.status}
+    <View
+      className="p-8 grow basis-[300px]"
+      style={{
+        backgroundColor: '#1F1F1F',
+        borderRadius: 2,
+        minHeight: 280,
+        justifyContent: 'space-between',
+      }}
+    >
+      <View>
+        <Eyebrow tone="peach">Class credits</Eyebrow>
+        <Text className="text-cream font-display italic text-[28px] mt-3 leading-8">
+          {p.label}
+        </Text>
+        <HairlineRule tone="cream" />
+        <Text className="text-cream font-display text-[44px] leading-[48px]">
+          {p.credits_left}
+          <Text className="text-cream/60 font-body text-base"> /{p.credits_total} left</Text>
+        </Text>
+        {p.expires_at ? (
+          <Text className="text-cream/70 font-body text-sm mt-2">
+            Expires {fmtDate(p.expires_at)}
           </Text>
+        ) : null}
+        {/* Hairline progress meter */}
+        <View
+          style={{ height: 2, backgroundColor: 'rgba(241,232,221,0.2)', marginTop: 18 }}
+          accessibilityRole={'progressbar' as any}
+          accessibilityValue={{ min: 0, max: p.credits_total, now: p.credits_left }}
+        >
+          <View style={{ height: 2, width: `${pct}%`, backgroundColor: '#EBC3A1' }} />
         </View>
       </View>
       <View className="mt-6">
-        <GhostButton label="Manage plan" href="/membership" />
+        <Link href="/membership" asChild>
+          <Pressable
+            className="border border-cream px-7 py-3.5 active:bg-cream/10 self-start"
+            accessibilityRole="link"
+            accessibilityLabel="Buy more credits"
+          >
+            <Text className="text-cream font-bodyBold tracking-[0.22em] uppercase text-[11px]">
+              Buy more
+            </Text>
+          </Pressable>
+        </Link>
       </View>
-    </Card>
-  );
-}
-
-function PackCard({ p }: { p: ClassPack }) {
-  const pct = (p.credits_left / p.credits_total) * 100;
-  return (
-    <Card className="grow basis-[300px]">
-      <Eyebrow>Class credits</Eyebrow>
-      <View className="mt-3"><CardTitle>{p.label}</CardTitle></View>
-      <Meta>
-        {p.credits_left} of {p.credits_total} classes left
-        {p.expires_at && ` · expires ${fmtDate(p.expires_at)}`}
-      </Meta>
-      <View
-        className="mt-4 bg-cream"
-        style={{ height: 6, borderRadius: 2, borderWidth: 1, borderColor: '#E8DCC9' }}
-        accessibilityRole={'progressbar' as any}
-        accessibilityValue={{ min: 0, max: p.credits_total, now: p.credits_left }}
-        accessibilityLabel="Class credits remaining"
-      >
-        <View className="bg-peach" style={{ width: `${pct}%`, height: '100%', borderRadius: 2 }} />
-      </View>
-      <View className="mt-6"><GhostButton label="Buy more credits" href="/membership" /></View>
-    </Card>
+    </View>
   );
 }
 
 function EmptyPlan() {
   return (
-    <Card className="grow">
+    <PaperCard className="grow">
       <Eyebrow>Get started</Eyebrow>
-      <View className="mt-3"><CardTitle>No active plan yet.</CardTitle></View>
-      <Meta>Pick a class pack or monthly membership to start booking.</Meta>
-      <View className="mt-6"><GhostButton label="See plans" href="/membership" /></View>
-    </Card>
+      <Text className="text-ink font-display italic text-3xl mt-3 leading-9">
+        Begin a practice.
+      </Text>
+      <HairlineRule />
+      <Body>
+        Pick a class pack or a monthly membership and the studio will be waiting.
+      </Body>
+      <View className="mt-7"><PrimaryLink label="See plans" href="/membership" /></View>
+    </PaperCard>
   );
 }
 
-function ReservationRowCard({ res }: { res: ReservationRow }) {
-  const s = res.class_session;
-  const instructorName = s.instructor?.preferred_name ?? s.instructor?.full_name ?? 'staff';
+// Vertical hairline-rule timeline used for "Also coming up" + "Recent".
+function ReservationTimeline({ items, variant = 'upcoming' }: { items: ReservationRow[]; variant?: 'upcoming' | 'history' }) {
   return (
-    <Card>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16, alignItems: 'center' }}>
-        <View style={{ minWidth: 110 }}>
-          <Text className="text-ink-2 text-[10px] tracking-[0.28em] uppercase font-bodyMd">
-            {fmtDate(s.starts_at)}
-          </Text>
-          <Text className="text-ink font-display text-xl mt-1 leading-6">{fmtTime(s.starts_at)}</Text>
-        </View>
-        <View className="grow basis-[200px]">
-          <Text className="text-ink font-display text-lg leading-6">{s.class_type.name}</Text>
-          <Meta>With {instructorName} · {s.location.name}</Meta>
-        </View>
-      </View>
-    </Card>
+    <View
+      style={{
+        borderLeftWidth: 1,
+        borderLeftColor: '#E8DCC9',
+        paddingLeft: 22,
+      }}
+    >
+      {items.map((r, i) => {
+        const s = r.class_session;
+        const instr = s.instructor?.preferred_name ?? s.instructor?.full_name ?? 'staff';
+        return (
+          <View key={r.id} style={{ position: 'relative', paddingBottom: i === items.length - 1 ? 0 : 22 }}>
+            {/* Bullet — peach for upcoming, ink-outlined for history */}
+            <View
+              style={{
+                position: 'absolute',
+                left: -28,
+                top: 6,
+                width: 9,
+                height: 9,
+                borderRadius: 4.5,
+                backgroundColor: variant === 'upcoming' ? '#EBC3A1' : 'transparent',
+                borderWidth: variant === 'history' ? 1 : 0,
+                borderColor: '#1F1F1F',
+              }}
+              accessibilityElementsHidden
+              importantForAccessibility="no"
+            />
+            <Text className="text-ink-2 text-[10px] tracking-[0.32em] uppercase font-bodyMd">
+              {fmtDate(s.starts_at)} · {fmtTime(s.starts_at)}
+            </Text>
+            <Text className="text-ink font-display italic text-2xl mt-1 leading-7">
+              {s.class_type.name}
+            </Text>
+            <Text className="text-ink-2 font-body text-sm leading-6 mt-1">
+              With {instr} · {s.location.name}
+            </Text>
+          </View>
+        );
+      })}
+    </View>
   );
 }
 
@@ -627,32 +822,24 @@ function ReservationRowCard({ res }: { res: ReservationRow }) {
 function BookingsSection({ upcoming, recent }: { upcoming: ReservationRow[]; recent: ReservationRow[] }) {
   return (
     <>
-      <Eyebrow>Bookings</Eyebrow>
-      <Text
-        className="text-ink font-display text-[40px] mt-3 leading-[44px]"
-        accessibilityRole="header"
-        // @ts-expect-error
-        aria-level={1}
-      >
-        All your reservations.
-      </Text>
-      <Meta>Upcoming above the line, attended below.</Meta>
-
-      <View className="mt-8">
-        <Eyebrow>Upcoming</Eyebrow>
-        <View className="mt-3 gap-2">
-          {upcoming.length > 0
-            ? upcoming.map((r) => <ReservationRowCard key={r.id} res={r} />)
-            : <Card><Meta>No upcoming reservations.</Meta></Card>}
-        </View>
-      </View>
+      <SectionHero
+        eyebrow="Reservations"
+        title="Your bookings."
+        body="Everything you have on the calendar — upcoming and attended."
+      />
       <View className="mt-10">
+        <Eyebrow>Upcoming</Eyebrow>
+        <HairlineRule />
+        {upcoming.length > 0
+          ? <ReservationTimeline items={upcoming} />
+          : <PaperCard><Body>No upcoming reservations.</Body></PaperCard>}
+      </View>
+      <View className="mt-12">
         <Eyebrow>History</Eyebrow>
-        <View className="mt-3 gap-2">
-          {recent.length > 0
-            ? recent.map((r) => <ReservationRowCard key={r.id} res={r} />)
-            : <Card><Meta>No completed classes yet.</Meta></Card>}
-        </View>
+        <HairlineRule />
+        {recent.length > 0
+          ? <ReservationTimeline items={recent} variant="history" />
+          : <PaperCard><Body>No completed classes yet.</Body></PaperCard>}
       </View>
     </>
   );
@@ -661,19 +848,14 @@ function BookingsSection({ upcoming, recent }: { upcoming: ReservationRow[]; rec
 function PackagesSection({ membership, pack }: { membership: Membership | null; pack: ClassPack | null }) {
   return (
     <>
-      <Eyebrow>Packages</Eyebrow>
-      <Text
-        className="text-ink font-display text-[40px] mt-3 leading-[44px]"
-        accessibilityRole="header"
-        // @ts-expect-error
-        aria-level={1}
-      >
-        Plan & credits.
-      </Text>
-      <Meta>Your active subscriptions and class packs.</Meta>
-      <View className="mt-8" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
-        {membership ? <MembershipCard m={membership} /> : null}
-        {pack ? <PackCard p={pack} /> : null}
+      <SectionHero
+        eyebrow="Plan"
+        title="Membership & credits."
+        body="What's keeping your practice on the books."
+      />
+      <View className="mt-10" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 18 }}>
+        {membership ? <ConciergeMembership m={membership} /> : null}
+        {pack ? <ConciergePack p={pack} /> : null}
         {!membership && !pack ? <EmptyPlan /> : null}
       </View>
     </>
@@ -683,18 +865,13 @@ function PackagesSection({ membership, pack }: { membership: Membership | null; 
 function ProfileSection({ member, userEmail }: { member: Member | null; userEmail: string }) {
   return (
     <>
-      <Eyebrow>Profile</Eyebrow>
-      <Text
-        className="text-ink font-display text-[40px] mt-3 leading-[44px]"
-        accessibilityRole="header"
-        // @ts-expect-error
-        aria-level={1}
-      >
-        Your studio profile.
-      </Text>
-      <Meta>What we know about you.</Meta>
-      <View className="mt-8">
-        <Card>
+      <SectionHero
+        eyebrow="Profile"
+        title="The studio's notes on you."
+        body="Editing lands in the next pass. For now this is a read-only snapshot."
+      />
+      <View className="mt-10">
+        <PaperCard>
           <ProfileRow label="Name" value={member?.full_name ?? member?.preferred_name ?? '—'} />
           <ProfileRow label="Preferred name" value={member?.preferred_name ?? '—'} />
           <ProfileRow label="Email" value={member?.email ?? userEmail} />
@@ -704,10 +881,7 @@ function ProfileSection({ member, userEmail }: { member: Member | null; userEmai
             value={member?.joined_at ? new Date(member.joined_at).toLocaleDateString() : '—'}
             isLast
           />
-        </Card>
-        <Meta>
-          Editing the profile lands in the next pass — for now this is a read-only snapshot.
-        </Meta>
+        </PaperCard>
       </View>
     </>
   );
@@ -715,18 +889,18 @@ function ProfileSection({ member, userEmail }: { member: Member | null; userEmai
 function ProfileRow({ label, value, isLast = false }: { label: string; value: string; isLast?: boolean }) {
   return (
     <View
-      className="py-3"
+      className="py-4"
       style={{
         borderBottomWidth: isLast ? 0 : 1,
         borderBottomColor: '#E8DCC9',
         flexDirection: 'row',
         flexWrap: 'wrap',
-        gap: 8,
+        gap: 12,
         justifyContent: 'space-between',
       }}
     >
-      <Text className="text-ink-2 text-[10px] tracking-[0.28em] uppercase font-bodyMd">{label}</Text>
-      <Text className="text-ink font-body text-sm">{value}</Text>
+      <Text className="text-ink-2 text-[10px] tracking-[0.32em] uppercase font-bodyMd">{label}</Text>
+      <Text className="text-ink font-display italic text-base">{value}</Text>
     </View>
   );
 }
@@ -735,17 +909,12 @@ function ProfileRow({ label, value, isLast = false }: { label: string; value: st
 function AdminSection() {
   return (
     <>
-      <Eyebrow>Studio</Eyebrow>
-      <Text
-        className="text-ink font-display text-[40px] mt-3 leading-[44px]"
-        accessibilityRole="header"
-        // @ts-expect-error
-        aria-level={1}
-      >
-        Studio overview.
-      </Text>
-      <Meta>Owner + instructor tools land here. First slice is the live counts panel below.</Meta>
-      <View className="mt-8"><OwnerOverviewPanel /></View>
+      <SectionHero
+        eyebrow="Studio"
+        title="Owner ledger."
+        body="A live look across the studio. More tools land here as we build them."
+      />
+      <View className="mt-10"><OwnerOverviewPanel /></View>
     </>
   );
 }
@@ -768,19 +937,18 @@ function OwnerOverviewPanel() {
     return () => { live = false; };
   }, []);
   return (
-    <View className="mt-2 p-6" style={{ backgroundColor: '#1F1F1F', borderRadius: 4 }}>
-      <Text className="text-peach text-[10px] tracking-[0.32em] uppercase font-bodyMd">
-        Owner Overview
-      </Text>
+    <View className="p-8" style={{ backgroundColor: '#1F1F1F', borderRadius: 2 }}>
+      <Eyebrow tone="peach">Studio ledger</Eyebrow>
       <Text
-        className="text-cream font-display text-2xl mt-2 leading-7"
+        className="text-cream font-display italic text-3xl mt-3 leading-9"
         accessibilityRole="header"
         // @ts-expect-error
         aria-level={2}
       >
-        Studio at a glance
+        At a glance.
       </Text>
-      <View className="mt-5" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 24 }}>
+      <HairlineRule tone="cream" />
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 32 }}>
         <Stat label="Members" value={counts?.members ?? '—'} />
         <Stat label="Active memberships" value={counts?.memberships ?? '—'} />
         <Stat label="Sessions next 7 days" value={counts?.sessions7d ?? '—'} />
@@ -790,9 +958,9 @@ function OwnerOverviewPanel() {
 }
 function Stat({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <View style={{ minWidth: 120 }}>
-      <Text className="text-cream/70 text-[10px] tracking-[0.28em] uppercase font-bodyMd">{label}</Text>
-      <Text className="text-cream font-display text-3xl mt-1 leading-9">{value}</Text>
+    <View style={{ minWidth: 140 }}>
+      <Text className="text-cream/70 text-[10px] tracking-[0.32em] uppercase font-bodyMd">{label}</Text>
+      <Text className="text-cream font-display italic text-[44px] mt-1 leading-[48px]">{value}</Text>
     </View>
   );
 }
