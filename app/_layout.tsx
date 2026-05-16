@@ -8,6 +8,7 @@ import '../global.css';
 
 import { SkipLink, MainLandmark } from '@/components/skip-link';
 import { TopNav } from '@/components/top-nav';
+import { SiteFooter } from '@/components/site-footer';
 import { AuthProvider } from '@/lib/auth-context';
 
 import {
@@ -70,12 +71,17 @@ export default function RootLayout() {
         <TopNav />
         <MainLandmark>
           <Stack>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="admin"  options={{ headerShown: false }} />
-            <Stack.Screen name="waiver" options={{ headerShown: false }} />
+            <Stack.Screen name="(tabs)"      options={{ headerShown: false }} />
+            <Stack.Screen name="admin"       options={{ headerShown: false }} />
+            <Stack.Screen name="waiver"      options={{ headerShown: false }} />
+            <Stack.Screen name="contact"     options={{ headerShown: false }} />
+            <Stack.Screen name="faq"         options={{ headerShown: false }} />
+            <Stack.Screen name="instructors" options={{ headerShown: false }} />
+            <Stack.Screen name="locations"   options={{ headerShown: false }} />
             <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
           </Stack>
         </MainLandmark>
+        <SiteFooter />
         <StatusBar style="dark" />
       </ThemeProvider>
     </AuthProvider>
