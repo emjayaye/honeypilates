@@ -81,20 +81,14 @@ const GhostButton = ({ label, href }: { label: string; href: string }) => (
 
 // ─── screen ─────────────────────────────────────────────────────────
 export default function AccountScreen() {
-  const { session, loading: authLoading } = useAuth();
+  const { session } = useAuth();
 
-  if (authLoading) return <FullPageLoader />;
+  // No loading gate — if there's no session yet, the user always sees
+  // the AuthScreen and can act immediately. When a real session
+  // arrives (initial restore or after sign-in), this re-renders into
+  // the dashboard. No spinner ever blocks the UI from being usable.
   if (!session) return <ScrollView contentContainerClassName="bg-cream"><AuthScreen /></ScrollView>;
-
   return <SignedInDashboard userId={session.user.id} />;
-}
-
-function FullPageLoader() {
-  return (
-    <View className="flex-1 bg-cream items-center justify-center py-24">
-      <ActivityIndicator color="#1F1F1F" />
-    </View>
-  );
 }
 
 // ─── dashboard ──────────────────────────────────────────────────────
