@@ -57,6 +57,11 @@ const storage =
     ? (typeof window !== 'undefined' ? webStorage : noopStorage)
     : AsyncStorage;
 
+// No-op cross-tab lock. Supabase auth-js defaults to navigator.locks
+// which has hung on us during web hydration. Honey Pilates is single-
+// user-per-tab; we don't need cross-tab coordination for token refresh.
+const noLock = async (_name: string, _timeout: number, fn: () => Promise<any>) => fn();
+
 export const supabase = createClient(
   supabaseUrl ?? 'https://placeholder.supabase.co',
   supabaseAnonKey ?? 'placeholder-anon-key',
@@ -66,6 +71,7 @@ export const supabase = createClient(
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: false,
+      lock: noLock,
     },
   },
 );
