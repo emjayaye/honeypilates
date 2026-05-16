@@ -16,7 +16,6 @@ const NAV: NavItem[] = [
   { href: '/',           label: 'Home' },
   { href: '/schedule',   label: 'Schedule' },
   { href: '/membership', label: 'Pricing' },
-  { href: '/account',    label: 'Account' },
 ];
 
 export function TopNav() {
@@ -54,7 +53,7 @@ export function TopNav() {
           </Pressable>
         </Link>
 
-        {/* Nav links */}
+        {/* Nav links + standout Member Access CTA */}
         <View className="flex-row items-center gap-1">
           {NAV.map((n) => {
             const active =
@@ -94,6 +93,24 @@ export function TopNav() {
               </Link>
             );
           })}
+
+          {/* Member Access — primary CTA. Filled ink pill with cream
+              text + tracked-out label so it visually outranks the text
+              nav links. Routes to /account for now; Phase 2 will check
+              the auth session there and either show sign-in or the
+              member portal. */}
+          <Link href="/account" asChild>
+            <Pressable
+              className="bg-ink px-5 py-3 ml-3 active:opacity-80"
+              accessibilityRole="link"
+              accessibilityLabel="Member access — sign in or view your account"
+              hitSlop={4}
+            >
+              <Text className="text-cream font-bodyBold text-[11px] tracking-[0.28em] uppercase">
+                Member Access
+              </Text>
+            </Pressable>
+          </Link>
         </View>
       </View>
     </SafeAreaView>
