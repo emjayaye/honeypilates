@@ -91,6 +91,16 @@ export default function AccountScreen() {
   return <SignedInDashboard userId={session.user.id} />;
 }
 
+// Small spinner used by the dashboard while its 5 parallel queries
+// resolve. Each query is timed out at 5s so this can't run forever.
+function FullPageLoader() {
+  return (
+    <View className="flex-1 bg-cream items-center justify-center py-24">
+      <ActivityIndicator color="#1F1F1F" />
+    </View>
+  );
+}
+
 // ─── dashboard ──────────────────────────────────────────────────────
 function SignedInDashboard({ userId }: { userId: string }) {
   const [member, setMember] = useState<Member | null>(null);
