@@ -1,3 +1,74 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*  ─────────────────────────────────────────────────────────────────
+    ACCESSIBILITY — web-only baseline. Pairs with the in-component
+    accessibilityRole / accessibilityLabel props for native parity.
+    Target: WCAG 2.1 AA.
+    ─────────────────────────────────────────────────────────────── */
+
+/* Document language — set by the root <html> tag at runtime too. */
+:root { color-scheme: light; }
+
+/* Keyboard focus rings — visible only when navigating by keyboard,
+   not on mouse click (mouse-click users rarely want the ring). */
+*:focus { outline: none; }
+*:focus-visible {
+  outline: 2px solid #1F1F1F;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Anchor + button focus get a softer peach inner glow over the ink
+   ring so the brand still reads. */
+a:focus-visible,
+button:focus-visible,
+[role="button"]:focus-visible,
+[role="link"]:focus-visible {
+  outline: 2px solid #1F1F1F;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 5px rgba(235, 195, 161, 0.45);
+}
+
+/* Skip-to-main link — invisible until the first Tab keypress, then
+   becomes a high-contrast pill at top-left for screen-reader + keyboard
+   users to jump past the nav. */
+.ros-skip-link {
+  position: absolute;
+  left: 12px;
+  top: -100px;
+  background: #1F1F1F;
+  color: #F1E8DD;
+  padding: 10px 18px;
+  font-family: 'DMSans_600SemiBold', system-ui, sans-serif;
+  font-size: 14px;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+  border-radius: 2px;
+  z-index: 9999;
+  transition: top 0.15s ease;
+}
+.ros-skip-link:focus { top: 12px; }
+
+/* Reduced motion — kill non-essential animations / transitions for
+   users with vestibular sensitivity, per WCAG 2.3.3. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* High-contrast / forced-colors mode — preserve our intent under
+   Windows High Contrast and similar. */
+@media (forced-colors: active) {
+  *:focus-visible {
+    outline-color: CanvasText;
+    box-shadow: none;
+  }
+}

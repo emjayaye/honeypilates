@@ -7,14 +7,23 @@ export default function AccountScreen() {
   return (
     <SafeAreaView className="flex-1 bg-cream" edges={['top']}>
       <View className="px-6 pt-10">
-        <Text className="text-sage text-[10px] tracking-[0.32em] uppercase font-bodyMd">
+        <Text className="text-ink-2 text-[10px] tracking-[0.32em] uppercase font-bodyMd">
           You
         </Text>
-        <Text className="text-ink text-[36px] font-display mt-3 leading-[40px]">
+        <Text
+          className="text-ink text-[36px] font-display mt-3 leading-[40px]"
+          accessibilityRole="header"
+          // @ts-expect-error
+          aria-level={1}
+        >
           Account
         </Text>
-        <View className="h-[1px] bg-ink/15 mt-6 mb-5 w-16" />
-        <Text className="text-sage font-body leading-7 max-w-[34ch]">
+        <View
+          className="h-[1px] bg-ink/15 mt-6 mb-5 w-16"
+          accessibilityElementsHidden
+          importantForAccessibility="no"
+        />
+        <Text className="text-ink-2 font-body leading-7 max-w-[34ch]">
           Coming next: email + Apple/Google sign-in, your bookings, your
           waiver, and your studio profile.
         </Text>

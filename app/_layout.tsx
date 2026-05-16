@@ -1,8 +1,12 @@
 import { ThemeProvider, DefaultTheme } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { Platform } from 'react-native';
+import { useEffect } from 'react';
 import 'react-native-reanimated';
 import '../global.css';
+
+import { SkipLink, MainLandmark } from '@/components/skip-link';
 
 import {
   useFonts,
@@ -45,16 +49,27 @@ export default function RootLayout() {
     DMSans_600SemiBold,
   });
 
+  // Set <html lang> on web so screen readers pronounce content correctly
+  // (WCAG 3.1.1). RN web renders inside the host page, so we patch it once.
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      document.documentElement.setAttribute('lang', 'en');
+    }
+  }, []);
+
   // Hold first paint until brand fonts load so we never flash a system
   // font (Fahkwang in particular has a very distinct silhouette).
   if (!fontsLoaded) return null;
 
   return (
     <ThemeProvider value={HoneyTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-      </Stack>
+      <SkipLink />
+      <MainLandmark>
+        <Stack>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+        </Stack>
+      </MainLandmark>
       <StatusBar style="dark" />
     </ThemeProvider>
   );

@@ -15,7 +15,12 @@ module.exports = {
         //   --color_4 #F1E8DD  page bg / cream
         //   --color_5 #EBC3A1  peach accent / primary CTA
         ink:    '#1F1F1F',
+        // sage: #777C75 from the live site fails WCAG AA (3.06:1 on cream).
+        // We keep it as a decorative tint for non-text use only. For body
+        // copy + meta labels, use `text-ink-2` (#535350) which clears
+        // 5.0:1 on cream and 4.5:1 on peach — comfortably AA.
         sage:   '#777C75',
+        'ink-2': '#535350',
         cream:  '#F1E8DD',
         peach:  '#EBC3A1',
         white:  '#FFFFFF',

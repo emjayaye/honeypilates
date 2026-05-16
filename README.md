@@ -73,6 +73,17 @@ headings; `font-body` (DM Sans 400/500/600) for everything else.
 Tailwind via NativeWind: `bg-cream`, `text-ink`, `font-display`,
 `tracking-[0.32em]`, etc.
 
+## Accessibility
+
+This project targets **WCAG 2.1 Level AA** for ADA Title III compliance.
+See [ACCESSIBILITY.md](ACCESSIBILITY.md) for the standard, the
+approved color tokens, the PR checklist, and the tooling we use.
+
+Every interactive element ships with `accessibilityRole` +
+`accessibilityLabel`. Every page has a skip-to-main-content link,
+keyboard focus rings, reduced-motion handling, and verified color
+contrast on all body text.
+
 ## Roadmap
 
 See [ROADMAP.md](ROADMAP.md) for the phased delivery plan.
