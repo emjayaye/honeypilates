@@ -919,6 +919,22 @@ function PackagesSection({ membership, pack }: { membership: Membership | null; 
 }
 
 function ProfileSection({ member, userEmail }: { member: Member | null; userEmail: string }) {
+  const [waiverSignedAt, setWaiverSignedAt] = useState<string | null>(null);
+  const [waiverChecked, setWaiverChecked] = useState(false);
+
+  useEffect(() => {
+    if (!member?.id) return;
+    (async () => {
+      const { data } = await supabase
+        .from('member_waiver_status')
+        .select('signed_at')
+        .eq('member_id', member.id)
+        .maybeSingle();
+      setWaiverSignedAt((data?.signed_at as string | null) ?? null);
+      setWaiverChecked(true);
+    })();
+  }, [member?.id]);
+
   return (
     <>
       <SectionHero
@@ -939,6 +955,71 @@ function ProfileSection({ member, userEmail }: { member: Member | null; userEmai
           />
         </PaperCard>
       </View>
+
+      {/* Waiver status card — only renders once the check completes
+          so it doesn't flash from "missing" to "signed" on slow nets. */}
+      {waiverChecked && (
+        <View className="mt-8">
+          <Eyebrow>Studio waiver</Eyebrow>
+          <HairlineRule />
+          {waiverSignedAt ? (
+            <PaperCard>
+              <View className="flex-row items-center gap-3">
+                <View
+                  style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#5C6E4F' }}
+                  accessibilityElementsHidden importantForAccessibility="no"
+                />
+                <Text className="text-ink font-display italic text-xl leading-7">On file.</Text>
+              </View>
+              <Text className="text-ink-2 font-body text-sm leading-6 mt-2">
+                Signed {new Date(waiverSignedAt).toLocaleDateString()}.
+              </Text>
+              <View className="mt-5">
+                <Link href="/waiver" asChild>
+                  <Pressable
+                    className="border border-ink px-6 py-3 self-start active:bg-ink/5"
+                    accessibilityRole="link"
+                    accessibilityLabel="View the signed waiver"
+                  >
+                    <Text className="text-ink font-bodyBold tracking-[0.22em] uppercase text-[11px]">
+                      View waiver
+                    </Text>
+                  </Pressable>
+                </Link>
+              </View>
+            </PaperCard>
+          ) : (
+            <PaperCard>
+              <View className="flex-row items-center gap-3">
+                <View
+                  style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#8a2026' }}
+                  accessibilityElementsHidden importantForAccessibility="no"
+                />
+                <Text className="text-ink font-display italic text-xl leading-7">
+                  Sign before your first class.
+                </Text>
+              </View>
+              <Text className="text-ink-2 font-body text-sm leading-6 mt-2">
+                Honey Pilates requires every member to sign the studio waiver before booking.
+                One-time, kept on file.
+              </Text>
+              <View className="mt-5">
+                <Link href="/waiver" asChild>
+                  <Pressable
+                    className="bg-ink px-7 py-3.5 self-start active:opacity-80"
+                    accessibilityRole="link"
+                    accessibilityLabel="Sign the studio waiver"
+                  >
+                    <Text className="text-cream font-bodyBold tracking-[0.22em] uppercase text-[11px]">
+                      Sign waiver
+                    </Text>
+                  </Pressable>
+                </Link>
+              </View>
+            </PaperCard>
+          )}
+        </View>
+      )}
     </>
   );
 }

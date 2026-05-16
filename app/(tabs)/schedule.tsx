@@ -3,7 +3,7 @@ import { ScrollView, View, Text, Pressable, ActivityIndicator } from 'react-nati
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 
 // Schedule — public, but reserve actions require auth. The list runs
 // off RLS-allowed reads of class_sessions joined to class_types,
@@ -34,6 +34,7 @@ const HairlineRule = () => (
 );
 
 export default function ScheduleScreen() {
+  const router = useRouter();
   const { session: auth } = useAuth();
   const userId = auth?.user.id ?? null;
 
@@ -124,7 +125,15 @@ export default function ScheduleScreen() {
       });
       await load();
     } catch (e: any) {
-      setFlash({ kind: 'err', text: e?.message ?? 'Could not reserve.' });
+      const msg = e?.message ?? '';
+      if (msg.includes('waiver_required')) {
+        // Send the member straight to the waiver screen rather than
+        // showing a cryptic error.
+        setFlash({ kind: 'ok', text: 'One moment — opening the studio waiver.' });
+        setTimeout(() => router.push('/waiver'), 400);
+      } else {
+        setFlash({ kind: 'err', text: msg || 'Could not reserve.' });
+      }
     } finally {
       setBusyId(null);
     }
