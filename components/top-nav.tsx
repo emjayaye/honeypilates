@@ -2,8 +2,20 @@ import React from 'react';
 import { View, Text, Pressable, Image, Platform } from 'react-native';
 import { Link, usePathname } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '@/lib/auth-context';
 
 const LOGO = require('@/assets/images/logo.webp');
+
+// Pull the most personable name we can from the Supabase session:
+// preferred -> first name -> email handle. Returns null if no session.
+function displayNameFor(session: ReturnType<typeof useAuth>['session']): string | null {
+  if (!session?.user) return null;
+  const meta = (session.user.user_metadata ?? {}) as Record<string, any>;
+  const full = (meta.full_name as string | undefined) ?? (meta.name as string | undefined);
+  if (full) return full.split(' ')[0];
+  const email = session.user.email ?? '';
+  return email.includes('@') ? email.split('@')[0] : email || null;
+}
 
 // Global top navigation. Logo wordmark on the left, route links on
 // the right. Active route gets an underline + ink color; inactive
@@ -20,6 +32,8 @@ const NAV: NavItem[] = [
 
 export function TopNav() {
   const pathname = usePathname();
+  const { session } = useAuth();
+  const displayName = displayNameFor(session);
 
   return (
     <SafeAreaView
@@ -94,21 +108,40 @@ export function TopNav() {
             );
           })}
 
-          {/* Member Access — primary CTA. Filled ink pill with cream
-              text + tracked-out label so it visually outranks the text
-              nav links. Routes to /account for now; Phase 2 will check
-              the auth session there and either show sign-in or the
-              member portal. */}
+          {/* CTA toggles on session.
+              - Signed out: filled ink "Member Access" pill.
+              - Signed in: filled ink pill with a small peach dot +
+                first name, links to /account. The dot reads as
+                "you're signed in" and matches the rest of the
+                cream/peach/ink palette. */}
           <Link href="/account" asChild>
             <Pressable
-              className="bg-ink px-5 py-3 ml-3 active:opacity-80"
+              className="bg-ink px-5 py-3 ml-3 active:opacity-80 flex-row items-center gap-2"
               accessibilityRole="link"
-              accessibilityLabel="Member access — sign in or view your account"
+              accessibilityLabel={
+                displayName
+                  ? `Signed in as ${displayName}. Open your account.`
+                  : 'Member access — sign in or view your account'
+              }
               hitSlop={4}
             >
-              <Text className="text-cream font-bodyBold text-[11px] tracking-[0.28em] uppercase">
-                Member Access
-              </Text>
+              {displayName ? (
+                <>
+                  <View
+                    className="bg-peach"
+                    style={{ width: 7, height: 7, borderRadius: 99 }}
+                    accessibilityElementsHidden
+                    importantForAccessibility="no"
+                  />
+                  <Text className="text-cream font-bodyBold text-[11px] tracking-[0.22em] uppercase">
+                    {displayName}
+                  </Text>
+                </>
+              ) : (
+                <Text className="text-cream font-bodyBold text-[11px] tracking-[0.28em] uppercase">
+                  Member Access
+                </Text>
+              )}
             </Pressable>
           </Link>
         </View>
