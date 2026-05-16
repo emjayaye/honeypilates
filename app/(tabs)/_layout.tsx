@@ -4,19 +4,25 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { HapticTab } from '@/components/haptic-tab';
 
-// Honey Pilates tab bar — Home (marketing/landing), Schedule (booking),
-// Membership (packages + plans), Account (auth + profile).
+// Honey Pilates tab bar — cream surface, ink-on-cream tabs with peach
+// active state. Matches the boutique-luxe palette from honeypilates.com.
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#D6912C', // honey-500
-        tabBarInactiveTintColor: '#5E3B14', // honey-800
+        tabBarActiveTintColor: '#1F1F1F',
+        tabBarInactiveTintColor: '#777C75',
+        tabBarLabelStyle: {
+          fontFamily: 'DMSans_500Medium',
+          fontSize: 11,
+          letterSpacing: 0.4,
+        },
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarStyle: {
-          backgroundColor: '#FAF5EA',
-          borderTopColor: '#F5DDA0',
+          backgroundColor: '#F1E8DD',
+          borderTopColor: '#E8DCC9',
+          paddingTop: 6,
         },
       }}>
       <Tabs.Screen
@@ -40,9 +46,9 @@ export default function TabLayout() {
       <Tabs.Screen
         name="membership"
         options={{
-          title: 'Membership',
+          title: 'Pricing',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="card-outline" size={size} color={color} />
+            <Ionicons name="pricetag-outline" size={size} color={color} />
           ),
         }}
       />
@@ -55,7 +61,6 @@ export default function TabLayout() {
           ),
         }}
       />
-      {/* Hide the auto-discovered explore tab from the original template */}
       <Tabs.Screen name="explore" options={{ href: null }} />
     </Tabs>
   );

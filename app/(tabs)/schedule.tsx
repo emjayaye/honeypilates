@@ -1,21 +1,22 @@
 import { View, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-// Phase 3 will fill this in with a real class calendar + reservation flow
-// backed by Supabase. For now it's a placeholder so the tab resolves.
+// Phase 3 fills this with a week-view calendar + reservation flow
+// backed by Supabase. For now it's a brand-styled placeholder.
 export default function ScheduleScreen() {
   return (
     <SafeAreaView className="flex-1 bg-cream" edges={['top']}>
-      <View className="px-6 pt-8">
-        <Text className="text-honey-700 text-xs tracking-widest uppercase">
+      <View className="px-6 pt-10">
+        <Text className="text-sage text-[10px] tracking-[0.32em] uppercase font-bodyMd">
           Studio
         </Text>
-        <Text className="text-walnut text-4xl font-serifBold mt-2">
+        <Text className="text-ink text-[36px] font-display mt-3 leading-[40px]">
           Schedule
         </Text>
-        <Text className="text-honey-800 italic mt-3 leading-6">
-          Coming next: a week-view of every class, instructor, and seat
-          left, with one-tap reservation.
+        <View className="h-[1px] bg-ink/15 mt-6 mb-5 w-16" />
+        <Text className="text-sage font-body leading-7 max-w-[34ch]">
+          Coming next: every class this week, instructor, seats remaining,
+          and one-tap reservation.
         </Text>
       </View>
     </SafeAreaView>

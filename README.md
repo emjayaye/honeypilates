@@ -56,17 +56,22 @@ ROADMAP.md           phased delivery plan
 
 ## Brand tokens
 
+Lifted from honeypilates.com (Duda site) — five-color luxe-boutique palette.
+
 | Token        | Hex      | Notes                                    |
 |--------------|----------|------------------------------------------|
-| `honey-500`  | `#D6912C` | primary brand color                       |
-| `honey-100`  | `#FBEFD2` | hero / soft surfaces                      |
-| `honey-800`  | `#5E3B14` | secondary text + warm dark                |
-| `cream`      | `#FAF5EA` | app background                            |
-| `walnut`     | `#2C1B0E` | primary text + grounded surfaces          |
-| `moss`       | `#5C6E4F` | accent — used sparingly                   |
+| `ink`        | `#1F1F1F` | primary text / charcoal CTAs              |
+| `sage`       | `#777C75` | secondary text / warm gray                |
+| `white`      | `#FFFFFF` | inverse copy                              |
+| `cream`      | `#F1E8DD` | page background                           |
+| `peach`      | `#EBC3A1` | primary accent / feature bands            |
+| `peach-50/200/400/700` | derived | hover, pressed, disabled tints   |
 
-Tailwind classes available everywhere via NativeWind: `bg-honey-100`,
-`text-walnut`, `border-honey-200`, etc.
+**Type pairing:** `font-display` (Fahkwang 400/500/600) for elegant
+headings; `font-body` (DM Sans 400/500/600) for everything else.
+
+Tailwind via NativeWind: `bg-cream`, `text-ink`, `font-display`,
+`tracking-[0.32em]`, etc.
 
 ## Roadmap
 
