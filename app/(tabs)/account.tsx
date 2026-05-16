@@ -200,10 +200,13 @@ function SignedInDashboard({ userId }: { userId: string }) {
 
   const signOut = async () => { await supabase.auth.signOut(); };
 
-  if (loading || !member) return <FullPageLoader />;
-
-  const displayName = member.preferred_name ?? (member.full_name?.split(' ')[0]) ?? 'there';
-  const isOwner = member.role === 'admin';
+  // Render immediately. If the member query is still in flight (or
+  // failed), fall back to the session email so the user sees the
+  // dashboard right away instead of staring at a spinner. Real values
+  // hydrate the moment data lands.
+  const displayName =
+    member?.preferred_name ?? member?.full_name?.split(' ')[0] ?? 'there';
+  const isOwner = member?.role === 'admin';
   const nextRes = upcoming[0];
 
   return (
@@ -230,7 +233,7 @@ function SignedInDashboard({ userId }: { userId: string }) {
         </Text>
         <View className="h-[1px] bg-ink/15 mt-6 w-16" accessibilityElementsHidden importantForAccessibility="no" />
         <Meta>
-          {member.email}
+          {member?.email ?? ''}
           {upcoming.length > 0 && ` · ${upcoming.length} class${upcoming.length === 1 ? '' : 'es'} on the books`}
         </Meta>
 
