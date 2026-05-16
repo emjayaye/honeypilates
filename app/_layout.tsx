@@ -7,6 +7,7 @@ import 'react-native-reanimated';
 import '../global.css';
 
 import { SkipLink, MainLandmark } from '@/components/skip-link';
+import { TopNav } from '@/components/top-nav';
 
 import {
   useFonts,
@@ -64,6 +65,7 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={HoneyTheme}>
       <SkipLink />
+      <TopNav />
       <MainLandmark>
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
