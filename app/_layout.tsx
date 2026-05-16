@@ -8,6 +8,7 @@ import '../global.css';
 
 import { SkipLink, MainLandmark } from '@/components/skip-link';
 import { TopNav } from '@/components/top-nav';
+import { AuthProvider } from '@/lib/auth-context';
 
 import {
   useFonts,
@@ -63,16 +64,18 @@ export default function RootLayout() {
   if (!fontsLoaded) return null;
 
   return (
-    <ThemeProvider value={HoneyTheme}>
-      <SkipLink />
-      <TopNav />
-      <MainLandmark>
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-        </Stack>
-      </MainLandmark>
-      <StatusBar style="dark" />
-    </ThemeProvider>
+    <AuthProvider>
+      <ThemeProvider value={HoneyTheme}>
+        <SkipLink />
+        <TopNav />
+        <MainLandmark>
+          <Stack>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+          </Stack>
+        </MainLandmark>
+        <StatusBar style="dark" />
+      </ThemeProvider>
+    </AuthProvider>
   );
 }
