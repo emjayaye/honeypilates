@@ -1,7 +1,9 @@
 import React from 'react';
-import { View, Text, Pressable, Platform } from 'react-native';
+import { View, Text, Pressable, Image, Platform } from 'react-native';
 import { Link, usePathname } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+const LOGO = require('@/assets/images/logo.webp');
 
 // Global top navigation. Logo wordmark on the left, route links on
 // the right. Active route gets an underline + ink color; inactive
@@ -32,32 +34,23 @@ export function TopNav() {
         className="flex-row items-center justify-between px-5 py-3"
         style={{ maxWidth: 1280, width: '100%', alignSelf: 'center' }}
       >
-        {/* Logo — text wordmark for now. Swap for an SVG or PNG when
-            the studio's mark is finalized; keep the Link wrapper so
-            it routes home from every page. */}
+        {/* Logo — Honey Pilates New York wordmark. Kept tall enough
+            (56px) so the "NEW YORK" tagline below the script remains
+            readable. The Image is decorative; the Link's
+            accessibilityLabel carries the meaning for screen readers. */}
         <Link href="/" asChild>
           <Pressable
             className="active:opacity-70"
             accessibilityRole="link"
-            accessibilityLabel="Honey Pilates — home"
+            accessibilityLabel="Honey Pilates New York — home"
             hitSlop={8}
           >
-            <View className="flex-row items-baseline">
-              <Text
-                className="text-ink font-display text-xl tracking-tight"
-                accessibilityElementsHidden
-                importantForAccessibility="no"
-              >
-                honey
-              </Text>
-              <Text
-                className="text-ink-2 font-bodyMd text-[11px] tracking-[0.32em] uppercase ml-2"
-                accessibilityElementsHidden
-                importantForAccessibility="no"
-              >
-                pilates
-              </Text>
-            </View>
+            <Image
+              source={LOGO}
+              style={{ height: 56, width: 92, resizeMode: 'contain' }}
+              accessibilityElementsHidden
+              importantForAccessibility="no"
+            />
           </Pressable>
         </Link>
 
