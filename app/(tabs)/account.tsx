@@ -49,7 +49,7 @@ type ReservationRow = {
     location: { name: string };
   };
 };
-type Section = 'overview' | 'bookings' | 'packages' | 'profile' | 'admin';
+type Section = 'overview' | 'bookings' | 'packages' | 'profile';
 
 // Editorial photography — used across the dashboard's cinematic moments.
 const HERO_IMG =
@@ -236,18 +236,14 @@ function SignedInDashboard({ userId, userEmail }: { userId: string; userEmail: s
     return () => { live = false; };
   }, [userId]);
 
-  const isOwner = member?.role === 'admin';
-  const isInstructorOrAdmin = member?.role === 'instructor' || isOwner;
-  const sections: { key: Section; label: string }[] = useMemo(() => {
-    const base: { key: Section; label: string }[] = [
-      { key: 'overview', label: 'Overview' },
-      { key: 'bookings', label: 'Bookings' },
-      { key: 'packages', label: 'Plan' },
-      { key: 'profile',  label: 'Profile' },
-    ];
-    if (isInstructorOrAdmin) base.push({ key: 'admin', label: 'Studio' });
-    return base;
-  }, [isInstructorOrAdmin]);
+  // Member-only dashboard. Admin / instructor surfaces live at /admin
+  // so this view stays a calm member ritual without studio chrome.
+  const sections: { key: Section; label: string }[] = useMemo(() => ([
+    { key: 'overview', label: 'Overview' },
+    { key: 'bookings', label: 'Bookings' },
+    { key: 'packages', label: 'Plan' },
+    { key: 'profile',  label: 'Profile' },
+  ]), []);
 
   return (
     <ScrollView contentContainerClassName="bg-cream pb-24">
@@ -279,14 +275,12 @@ function SignedInDashboard({ userId, userEmail }: { userId: string; userEmail: s
               pack={pack}
               upcoming={upcoming}
               recent={recent}
-              isOwner={isOwner}
               userEmail={userEmail}
             />
           )}
           {section === 'bookings' && <BookingsSection upcoming={upcoming} recent={recent} />}
           {section === 'packages' && <PackagesSection membership={membership} pack={pack} />}
           {section === 'profile'  && <ProfileSection member={member} userEmail={userEmail} />}
-          {section === 'admin'    && <AdminSection />}
         </View>
       </View>
     </ScrollView>
@@ -445,14 +439,13 @@ function MemberSidebar({
 
 // ─── OVERVIEW ───────────────────────────────────────────────────────
 function OverviewSection({
-  member, membership, pack, upcoming, recent, isOwner, userEmail,
+  member, membership, pack, upcoming, recent, userEmail,
 }: {
   member: Member | null;
   membership: Membership | null;
   pack: ClassPack | null;
   upcoming: ReservationRow[];
   recent: ReservationRow[];
-  isOwner: boolean;
   userEmail: string;
 }) {
   const displayName =
@@ -463,7 +456,7 @@ function OverviewSection({
     <>
       {/* Editorial greeting */}
       <View>
-        <Eyebrow>{isOwner ? 'Studio Owner' : timeOfDayGreeting()}</Eyebrow>
+        <Eyebrow>{timeOfDayGreeting()}</Eyebrow>
         <Text
           className="text-ink font-display italic text-[56px] mt-3 leading-[60px]"
           accessibilityRole="header"
@@ -491,24 +484,6 @@ function OverviewSection({
         {pack ? <ConciergePack p={pack} /> : null}
         {!membership && !pack ? <EmptyPlan /> : null}
       </View>
-
-      {/* Owner-only studio strip — sits below the personal section so
-          the member ritual still leads. */}
-      {isOwner && (
-        <View className="mt-14">
-          <Eyebrow>Studio</Eyebrow>
-          <Text
-            className="text-ink font-display italic text-3xl mt-3 leading-9"
-            accessibilityRole="header"
-            // @ts-expect-error
-            aria-level={2}
-          >
-            At a glance.
-          </Text>
-          <HairlineRule />
-          <OwnerOverviewPanel />
-        </View>
-      )}
 
       {/* Also coming up — refined list */}
       {upcoming.length > 1 && (
@@ -905,62 +880,5 @@ function ProfileRow({ label, value, isLast = false }: { label: string; value: st
   );
 }
 
-// ─── admin / owner section ──────────────────────────────────────────
-function AdminSection() {
-  return (
-    <>
-      <SectionHero
-        eyebrow="Studio"
-        title="Owner ledger."
-        body="A live look across the studio. More tools land here as we build them."
-      />
-      <View className="mt-10"><OwnerOverviewPanel /></View>
-    </>
-  );
-}
-
-function OwnerOverviewPanel() {
-  const [counts, setCounts] = useState<{ members: number; memberships: number; sessions7d: number } | null>(null);
-  useEffect(() => {
-    let live = true;
-    (async () => {
-      const [m, mem, s] = await Promise.all([
-        supabase.from('members').select('id', { count: 'exact', head: true }),
-        supabase.from('memberships').select('id', { count: 'exact', head: true }).eq('status', 'active'),
-        supabase.from('class_sessions').select('id', { count: 'exact', head: true })
-          .gte('starts_at', new Date().toISOString())
-          .lte('starts_at', new Date(Date.now() + 7 * 24 * 3600_000).toISOString()),
-      ]);
-      if (!live) return;
-      setCounts({ members: m.count ?? 0, memberships: mem.count ?? 0, sessions7d: s.count ?? 0 });
-    })();
-    return () => { live = false; };
-  }, []);
-  return (
-    <View className="p-8" style={{ backgroundColor: '#1F1F1F', borderRadius: 2 }}>
-      <Eyebrow tone="peach">Studio ledger</Eyebrow>
-      <Text
-        className="text-cream font-display italic text-3xl mt-3 leading-9"
-        accessibilityRole="header"
-        // @ts-expect-error
-        aria-level={2}
-      >
-        At a glance.
-      </Text>
-      <HairlineRule tone="cream" />
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 32 }}>
-        <Stat label="Members" value={counts?.members ?? '—'} />
-        <Stat label="Active memberships" value={counts?.memberships ?? '—'} />
-        <Stat label="Sessions next 7 days" value={counts?.sessions7d ?? '—'} />
-      </View>
-    </View>
-  );
-}
-function Stat({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <View style={{ minWidth: 140 }}>
-      <Text className="text-cream/70 text-[10px] tracking-[0.32em] uppercase font-bodyMd">{label}</Text>
-      <Text className="text-cream font-display italic text-[44px] mt-1 leading-[48px]">{value}</Text>
-    </View>
-  );
-}
+// Admin / owner UI moved to app/admin.tsx. The member dashboard stays
+// member-only so the two surfaces can evolve independently.

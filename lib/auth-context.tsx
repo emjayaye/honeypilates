@@ -2,66 +2,93 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 
-// AuthContext exposes the current Supabase session + a loading flag
-// so screens can render auth UI vs. signed-in UI without polling.
-// supabase.auth.onAuthStateChange keeps the session fresh across
-// sign-in, sign-out, token refresh, and the initial restore from
-// AsyncStorage on cold start.
+// AuthContext exposes the current Supabase session AND the signed-in
+// member's role so admin-gated UI (top-nav admin link, /admin route)
+// can render without re-querying on every screen.
 //
-// Safety: getSession() can hang on web if the underlying lock /
-// storage misbehaves. We race it against a 4s timeout so the app
-// always escapes the loading state, even if Supabase is sick.
+// Role is fetched once after a session resolves, then refreshed
+// whenever onAuthStateChange fires SIGNED_IN. Falls back to null
+// on signed-out / failed fetch.
+type Role = 'member' | 'instructor' | 'admin' | null;
+
 type AuthState = {
   session: Session | null;
+  role: Role;
+  isAdmin: boolean;
+  isInstructorOrAdmin: boolean;
   loading: boolean;
 };
 
-const AuthContext = createContext<AuthState>({ session: null, loading: true });
+const AuthContext = createContext<AuthState>({
+  session: null,
+  role: null,
+  isAdmin: false,
+  isInstructorOrAdmin: false,
+  loading: true,
+});
 
 const SESSION_TIMEOUT_MS = 4000;
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
+  const [role, setRole] = useState<Role>(null);
   const [loading, setLoading] = useState(true);
+
+  // Fetch role for a given user id. Quiet on error — admin gates
+  // simply close if we can't read the row.
+  const refreshRole = async (userId: string | undefined | null) => {
+    if (!userId) { setRole(null); return; }
+    try {
+      const { data, error } = await supabase
+        .from('members')
+        .select('role')
+        .eq('id', userId)
+        .maybeSingle();
+      if (error) {
+        console.warn('[auth] role fetch failed:', error);
+        setRole(null);
+      } else {
+        setRole((data?.role as Role) ?? 'member');
+      }
+    } catch (e) {
+      console.warn('[auth] role fetch threw:', e);
+      setRole(null);
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
 
-    // Race getSession() against a timeout — if Supabase hangs we
-    // still drop into the unauthed UI so the user can act.
     const restore = async () => {
       try {
         const result = await Promise.race([
           supabase.auth.getSession(),
           new Promise<{ data: { session: null } }>((resolve) =>
             setTimeout(() => {
-              // eslint-disable-next-line no-console
               console.warn('[auth] getSession() timed out — falling back to signed-out state');
               resolve({ data: { session: null } });
             }, SESSION_TIMEOUT_MS),
           ),
         ]);
         if (!mounted) return;
-        setSession(result.data.session);
+        const s = result.data.session;
+        setSession(s);
+        await refreshRole(s?.user.id);
       } catch (e) {
-        // eslint-disable-next-line no-console
         console.error('[auth] getSession() threw:', e);
-        if (mounted) setSession(null);
+        if (mounted) { setSession(null); setRole(null); }
       } finally {
         if (mounted) setLoading(false);
       }
     };
     restore();
 
-    // Subscribe to all subsequent auth state changes (sign-in /
-    // sign-out / token refresh / user updated). This fires immediately
-    // on subscription with the current session, so the listener also
-    // covers the restore path on most platforms.
-    const { data: sub } = supabase.auth.onAuthStateChange((event, next) => {
-      // eslint-disable-next-line no-console
+    const { data: sub } = supabase.auth.onAuthStateChange(async (event, next) => {
       console.log('[auth] state change:', event, next?.user?.email ?? 'no user');
       setSession(next);
       setLoading(false);
+      if (next?.user.id) await refreshRole(next.user.id);
+      else setRole(null);
     });
 
     return () => {
@@ -70,8 +97,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  const isAdmin = role === 'admin';
+  const isInstructorOrAdmin = role === 'admin' || role === 'instructor';
+
   return (
-    <AuthContext.Provider value={{ session, loading }}>
+    <AuthContext.Provider value={{ session, role, isAdmin, isInstructorOrAdmin, loading }}>
       {children}
     </AuthContext.Provider>
   );

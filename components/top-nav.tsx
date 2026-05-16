@@ -32,8 +32,14 @@ const NAV: NavItem[] = [
 
 export function TopNav() {
   const pathname = usePathname();
-  const { session } = useAuth();
+  const { session, isInstructorOrAdmin } = useAuth();
   const displayName = displayNameFor(session);
+
+  // Marketing routes always show; the Admin link only mounts for
+  // instructors / admins so members never see it in the chrome.
+  const visibleNav = isInstructorOrAdmin
+    ? [...NAV, { href: '/admin', label: 'Admin' } as NavItem]
+    : NAV;
 
   return (
     <SafeAreaView
@@ -69,7 +75,7 @@ export function TopNav() {
 
         {/* Nav links + standout Member Access CTA */}
         <View className="flex-row items-center gap-1">
-          {NAV.map((n) => {
+          {visibleNav.map((n) => {
             const active =
               n.href === '/'
                 ? pathname === '/' || pathname === '/index'
