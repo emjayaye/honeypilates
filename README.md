@@ -1,50 +1,79 @@
-# Welcome to your Expo app 👋
+# 🍯 Honey Pilates
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Booking app + studio website for **Honey Pilates** — one codebase
+shipping to **iOS App Store**, **Google Play**, and the **web**.
 
-## Get started
+## Stack
 
-1. Install dependencies
+- **Expo SDK 54** (React Native 0.81, React 19, Expo Router 6 file-based routing)
+- **TypeScript**
+- **NativeWind v4** (Tailwind CSS for React Native + web)
+- **Supabase** — auth, Postgres, storage, edge functions
+- **Stripe** (Phase 4) — packages, memberships, in-app payments
 
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Quick start
 
 ```bash
-npm run reset-project
+# Install
+npm install
+
+# Copy env template and fill in your Supabase keys
+cp .env.example .env
+
+# Run on web
+npm run web
+
+# Run on iOS simulator (macOS only)
+npm run ios
+
+# Run on Android emulator
+npm run android
+
+# Or open Expo Go on your phone and scan the QR code
+npm start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Project layout
 
-## Learn more
+```
+app/                 file-based routes (Expo Router)
+  (tabs)/            tab-bar routes
+    index.tsx        Home (landing)
+    schedule.tsx     Schedule + booking (Phase 3)
+    membership.tsx   Packages + plans (Phase 4)
+    account.tsx      Auth + profile (Phase 2)
+  _layout.tsx        Root layout — loads NativeWind global.css
+components/          shared UI primitives
+lib/
+  supabase.ts        Supabase client (auth + DB)
+constants/           legacy theme tokens from the template (will retire)
+hooks/               useColorScheme etc.
+assets/              fonts + images
+global.css           Tailwind directives loaded by metro/NativeWind
+tailwind.config.js   honey palette + font tokens
+ROADMAP.md           phased delivery plan
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+## Brand tokens
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+| Token        | Hex      | Notes                                    |
+|--------------|----------|------------------------------------------|
+| `honey-500`  | `#D6912C` | primary brand color                       |
+| `honey-100`  | `#FBEFD2` | hero / soft surfaces                      |
+| `honey-800`  | `#5E3B14` | secondary text + warm dark                |
+| `cream`      | `#FAF5EA` | app background                            |
+| `walnut`     | `#2C1B0E` | primary text + grounded surfaces          |
+| `moss`       | `#5C6E4F` | accent — used sparingly                   |
 
-## Join the community
+Tailwind classes available everywhere via NativeWind: `bg-honey-100`,
+`text-walnut`, `border-honey-200`, etc.
 
-Join our community of developers creating universal apps.
+## Roadmap
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+See [ROADMAP.md](ROADMAP.md) for the phased delivery plan.
+
+## Hosting
+
+- **Mobile** — built + submitted via Expo's EAS Build (Phase 9).
+- **Web** — `npx expo export -p web` → static export deployable to
+  Vercel / Netlify / Cloudflare Pages.
