@@ -2,6 +2,7 @@ import { ScrollView, Text, View, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { ClassGallery } from '@/components/class-gallery';
 
 // Honey Pilates — landing.
 // Visual language pulled from honeypilates.com: cream background,
@@ -46,8 +47,11 @@ export default function HomeScreen() {
           </View>
         </View>
 
+        {/* Class gallery — Apple-style horizontal snap carousel */}
+        <ClassGallery />
+
         {/* Peach feature band — echoing the live site's section colorways */}
-        <View className="bg-peach py-12 px-6">
+        <View className="bg-peach py-12 px-6 mt-12">
           <Text className="text-ink text-[10px] tracking-[0.32em] uppercase font-bodyMd">
             Women's Group Classes
           </Text>
