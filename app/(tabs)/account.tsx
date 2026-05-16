@@ -49,7 +49,25 @@ type ReservationRow = {
     location: { name: string };
   };
 };
-type Section = 'overview' | 'bookings' | 'packages' | 'profile';
+type Section = 'overview' | 'bookings' | 'packages' | 'honors' | 'profile';
+
+type Milestone = {
+  id: string;
+  key: string;
+  label: string;
+  threshold: number;
+  recognition_text: string | null;
+  free_credits: number;
+  merch_label: string | null;
+  perks_json: any | null;
+  sort_order: number;
+};
+type MemberMilestone = {
+  id: string;
+  milestone_id: string;
+  achieved_at: string;
+  status: 'earned' | 'fulfilled';
+};
 
 // Editorial photography — used across the dashboard's cinematic moments.
 const HERO_IMG =
@@ -187,6 +205,9 @@ function SignedInDashboard({ userId, userEmail }: { userId: string; userEmail: s
   const [pack, setPack] = useState<ClassPack | null>(null);
   const [upcoming, setUpcoming] = useState<ReservationRow[]>([]);
   const [recent, setRecent] = useState<ReservationRow[]>([]);
+  const [attendedCount, setAttendedCount] = useState<number>(0);
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
+  const [memberMilestones, setMemberMilestones] = useState<MemberMilestone[]>([]);
 
   useEffect(() => {
     let live = true;
@@ -203,7 +224,17 @@ function SignedInDashboard({ userId, userEmail }: { userId: string; userEmail: s
       } catch (e) { console.error(`[dashboard:${label}] threw`, e); return null; }
     };
     (async () => {
-      const [m, mem, p, up, re] = await Promise.all([
+      // Attended-count query is a separate head-count call so we can
+      // drive the Honors progress bar from the same source the
+      // milestone trigger uses.
+      const attendedCountPromise = supabase
+        .from('reservations')
+        .select('id', { count: 'exact', head: true })
+        .eq('member_id', userId)
+        .eq('status', 'attended')
+        .then((r) => ({ data: r.count ?? 0, error: r.error }));
+
+      const [m, mem, p, up, re, attended, ms, memMs] = await Promise.all([
         safe<Member>('members',
           supabase.from('members').select('id,email,full_name,preferred_name,role,joined_at').eq('id', userId).single()),
         safe<Membership>('membership',
@@ -228,10 +259,24 @@ function SignedInDashboard({ userId, userEmail }: { userId: string; userEmail: s
                        instructor:members(preferred_name, full_name),
                        location:studio_locations(name))`)
             .eq('member_id', userId).in('status', ['attended', 'no_show']).limit(3)),
+        safe<number>('attendedCount', attendedCountPromise),
+        safe<Milestone[]>('milestones',
+          supabase.from('milestones')
+            .select('id,key,label,threshold,recognition_text,free_credits,merch_label,perks_json,sort_order')
+            .eq('is_active', true)
+            .order('threshold', { ascending: true })),
+        safe<MemberMilestone[]>('memberMilestones',
+          supabase.from('member_milestones')
+            .select('id,milestone_id,achieved_at,status')
+            .eq('member_id', userId)
+            .order('achieved_at', { ascending: false })),
       ]);
       if (!live) return;
       setMember(m); setMembership(mem); setPack(p);
       setUpcoming(up ?? []); setRecent(re ?? []);
+      setAttendedCount(attended ?? 0);
+      setMilestones(ms ?? []);
+      setMemberMilestones(memMs ?? []);
     })();
     return () => { live = false; };
   }, [userId]);
@@ -242,6 +287,7 @@ function SignedInDashboard({ userId, userEmail }: { userId: string; userEmail: s
     { key: 'overview', label: 'Overview' },
     { key: 'bookings', label: 'Bookings' },
     { key: 'packages', label: 'Plan' },
+    { key: 'honors',   label: 'Honors' },
     { key: 'profile',  label: 'Profile' },
   ]), []);
 
@@ -276,10 +322,20 @@ function SignedInDashboard({ userId, userEmail }: { userId: string; userEmail: s
               upcoming={upcoming}
               recent={recent}
               userEmail={userEmail}
+              attendedCount={attendedCount}
+              milestones={milestones}
+              memberMilestones={memberMilestones}
             />
           )}
           {section === 'bookings' && <BookingsSection upcoming={upcoming} recent={recent} />}
           {section === 'packages' && <PackagesSection membership={membership} pack={pack} />}
+          {section === 'honors'   && (
+            <HonorsSection
+              attendedCount={attendedCount}
+              milestones={milestones}
+              memberMilestones={memberMilestones}
+            />
+          )}
           {section === 'profile'  && <ProfileSection member={member} userEmail={userEmail} />}
         </View>
       </View>
@@ -440,6 +496,7 @@ function MemberSidebar({
 // ─── OVERVIEW ───────────────────────────────────────────────────────
 function OverviewSection({
   member, membership, pack, upcoming, recent, userEmail,
+  attendedCount, milestones, memberMilestones,
 }: {
   member: Member | null;
   membership: Membership | null;
@@ -447,6 +504,9 @@ function OverviewSection({
   upcoming: ReservationRow[];
   recent: ReservationRow[];
   userEmail: string;
+  attendedCount: number;
+  milestones: Milestone[];
+  memberMilestones: MemberMilestone[];
 }) {
   const displayName =
     member?.preferred_name ?? member?.full_name?.split(' ')[0] ?? userEmail.split('@')[0];
@@ -483,6 +543,27 @@ function OverviewSection({
         {membership ? <ConciergeMembership m={membership} /> : null}
         {pack ? <ConciergePack p={pack} /> : null}
         {!membership && !pack ? <EmptyPlan /> : null}
+      </View>
+
+      {/* Honors strip — compact progress band that hints at the
+          full section in the rail. */}
+      <View className="mt-14">
+        <Eyebrow>Your honors</Eyebrow>
+        <Text
+          className="text-ink font-display italic text-3xl mt-3 leading-9"
+          accessibilityRole="header"
+          // @ts-expect-error
+          aria-level={2}
+        >
+          Class counter.
+        </Text>
+        <HairlineRule />
+        <HonorsProgress
+          attendedCount={attendedCount}
+          milestones={milestones}
+          memberMilestones={memberMilestones}
+          compact
+        />
       </View>
 
       {/* Also coming up — refined list */}
@@ -876,6 +957,271 @@ function ProfileRow({ label, value, isLast = false }: { label: string; value: st
     >
       <Text className="text-ink-2 text-[10px] tracking-[0.32em] uppercase font-bodyMd">{label}</Text>
       <Text className="text-ink font-display italic text-base">{value}</Text>
+    </View>
+  );
+}
+
+// ─── HONORS ─────────────────────────────────────────────────────────
+// Lifetime attendance reward system. Counts every reservation that
+// reached status='attended' and visualizes the journey through eight
+// named milestones (First Visit -> Founder). Each milestone the
+// member has earned renders as a peach badge; locked tiers are
+// hairline-outlined. Recognition copy, free credits, merch, and
+// perks each surface contextually so members see what's waiting.
+
+function HonorsSection({
+  attendedCount, milestones, memberMilestones,
+}: {
+  attendedCount: number;
+  milestones: Milestone[];
+  memberMilestones: MemberMilestone[];
+}) {
+  return (
+    <>
+      <SectionHero
+        eyebrow="Honors"
+        title="Class counter."
+        body="Every class you complete brings the next honor closer. Tiers unlock recognition, free credits, studio gifts, and perks."
+      />
+      <View className="mt-10">
+        <HonorsProgress
+          attendedCount={attendedCount}
+          milestones={milestones}
+          memberMilestones={memberMilestones}
+        />
+      </View>
+      <View className="mt-12">
+        <Eyebrow>All milestones</Eyebrow>
+        <HairlineRule />
+        <View className="gap-3">
+          {milestones.map((m) => {
+            const earned = memberMilestones.find((mm) => mm.milestone_id === m.id) ?? null;
+            const reached = attendedCount >= m.threshold;
+            return <MilestoneRow key={m.id} m={m} earned={earned} reached={reached} attendedCount={attendedCount} />;
+          })}
+        </View>
+      </View>
+    </>
+  );
+}
+
+function HonorsProgress({
+  attendedCount, milestones, memberMilestones, compact = false,
+}: {
+  attendedCount: number;
+  milestones: Milestone[];
+  memberMilestones: MemberMilestone[];
+  compact?: boolean;
+}) {
+  // Find the next-up milestone (smallest threshold > attendedCount) +
+  // the most recently earned milestone to show as the current tier.
+  const sorted = [...milestones].sort((a, b) => a.threshold - b.threshold);
+  const next = sorted.find((m) => m.threshold > attendedCount) ?? null;
+  const current = [...sorted].reverse().find((m) => attendedCount >= m.threshold) ?? null;
+  const prevThreshold = current?.threshold ?? 0;
+  const span = next ? next.threshold - prevThreshold : 1;
+  const within = attendedCount - prevThreshold;
+  const pct = next ? Math.min(100, Math.max(0, (within / span) * 100)) : 100;
+  const remaining = next ? next.threshold - attendedCount : 0;
+
+  return (
+    <View
+      className="p-8"
+      style={{
+        backgroundColor: '#1F1F1F',
+        borderRadius: 2,
+      }}
+    >
+      <View className="flex-row items-end justify-between" style={{ flexWrap: 'wrap', gap: 16 }}>
+        <View>
+          <Eyebrow tone="peach">{current ? `Current honor · ${current.label}` : 'Beginning'}</Eyebrow>
+          <Text
+            className="text-cream font-display italic text-[44px] mt-3 leading-[48px]"
+            accessibilityRole="header"
+            // @ts-expect-error
+            aria-level={compact ? 3 : 2}
+          >
+            {attendedCount}
+            <Text className="text-cream/60 font-body text-base">
+              {' '}{attendedCount === 1 ? 'class' : 'classes'} attended
+            </Text>
+          </Text>
+        </View>
+        {next ? (
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text className="text-peach text-[10px] tracking-[0.32em] uppercase font-bodyMd">
+              Next
+            </Text>
+            <Text className="text-cream font-display italic text-2xl mt-1 leading-7">
+              {next.label}
+            </Text>
+            <Text className="text-cream/70 font-body text-sm">
+              {remaining} {remaining === 1 ? 'class' : 'classes'} to go
+            </Text>
+          </View>
+        ) : (
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text className="text-peach text-[10px] tracking-[0.32em] uppercase font-bodyMd">
+              Lifetime
+            </Text>
+            <Text className="text-cream font-display italic text-2xl mt-1 leading-7">
+              All honors held
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {/* Hairline progress meter */}
+      <View
+        style={{ height: 2, backgroundColor: 'rgba(241,232,221,0.2)', marginTop: 24 }}
+        accessibilityRole={'progressbar' as any}
+        accessibilityValue={{
+          min: prevThreshold,
+          max: next?.threshold ?? attendedCount,
+          now: attendedCount,
+        }}
+        accessibilityLabel="Progress to next honor"
+      >
+        <View style={{ height: 2, width: `${pct}%`, backgroundColor: '#EBC3A1' }} />
+      </View>
+
+      {/* Earned badge strip — every milestone with an achievement row.
+          Compact mode shows the most recent few; full Honors page
+          shows them all. */}
+      {memberMilestones.length > 0 && (
+        <View
+          style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 22 }}
+          accessibilityRole={'list' as any}
+          accessibilityLabel="Earned milestones"
+        >
+          {(compact ? memberMilestones.slice(0, 6) : memberMilestones).map((mm) => {
+            const m = milestones.find((x) => x.id === mm.milestone_id);
+            if (!m) return null;
+            return (
+              <View
+                key={mm.id}
+                style={{
+                  paddingVertical: 6,
+                  paddingHorizontal: 12,
+                  backgroundColor: 'rgba(235,195,161,0.18)',
+                  borderWidth: 1,
+                  borderColor: '#EBC3A1',
+                  borderRadius: 99,
+                }}
+              >
+                <Text className="text-peach text-[10px] tracking-[0.28em] uppercase font-bodyMd">
+                  {m.label}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+      )}
+    </View>
+  );
+}
+
+function MilestoneRow({
+  m, earned, reached, attendedCount,
+}: {
+  m: Milestone;
+  earned: MemberMilestone | null;
+  reached: boolean;
+  attendedCount: number;
+}) {
+  const remaining = m.threshold - attendedCount;
+  return (
+    <View
+      className="p-6"
+      style={{
+        backgroundColor: '#FFFFFF',
+        borderWidth: 1,
+        borderColor: earned ? '#EBC3A1' : '#E8DCC9',
+        borderRadius: 2,
+        opacity: reached ? 1 : 0.65,
+      }}
+    >
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 16 }}>
+        <View className="flex-row items-center gap-4" style={{ minWidth: 0, flexShrink: 1 }}>
+          {/* Threshold chip — peach when earned, cream-outlined when locked */}
+          <View
+            style={{
+              width: 56, height: 56, borderRadius: 28,
+              backgroundColor: earned ? '#EBC3A1' : 'transparent',
+              borderWidth: 1,
+              borderColor: earned ? '#EBC3A1' : '#E8DCC9',
+              alignItems: 'center', justifyContent: 'center',
+            }}
+            accessibilityElementsHidden
+            importantForAccessibility="no"
+          >
+            <Text className={(earned ? 'text-ink ' : 'text-ink-2 ') + 'font-display italic text-lg'}>
+              {m.threshold}
+            </Text>
+          </View>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text className="text-ink font-display italic text-2xl leading-7">{m.label}</Text>
+            {m.recognition_text && (
+              <Text className="text-ink-2 font-body text-sm leading-6 mt-1">{m.recognition_text}</Text>
+            )}
+          </View>
+        </View>
+        <View style={{ alignItems: 'flex-end', minWidth: 130 }}>
+          {earned ? (
+            <Text className="text-peach text-[10px] tracking-[0.32em] uppercase font-bodyMd">
+              Earned
+            </Text>
+          ) : reached ? (
+            <Text className="text-ink-2 text-[10px] tracking-[0.32em] uppercase font-bodyMd">
+              Pending award
+            </Text>
+          ) : (
+            <Text className="text-ink-2 text-[10px] tracking-[0.32em] uppercase font-bodyMd">
+              {remaining} to go
+            </Text>
+          )}
+        </View>
+      </View>
+
+      {/* Rewards strip — only renders pieces that exist */}
+      {(m.free_credits > 0 || m.merch_label || m.perks_json) && (
+        <View
+          style={{
+            flexDirection: 'row', flexWrap: 'wrap', gap: 8,
+            marginTop: 18, paddingTop: 18,
+            borderTopWidth: 1, borderTopColor: '#E8DCC9',
+          }}
+        >
+          {m.free_credits > 0 && (
+            <RewardChip icon="gift-outline" label={`+${m.free_credits} free credit${m.free_credits === 1 ? '' : 's'}`} />
+          )}
+          {m.merch_label && <RewardChip icon="bag-outline" label={m.merch_label} />}
+          {m.perks_json?.early_booking_days && (
+            <RewardChip icon="time-outline" label={`${m.perks_json.early_booking_days}-day booking window`} />
+          )}
+          {m.perks_json?.guest_passes_per_month && (
+            <RewardChip icon="people-outline" label={`${m.perks_json.guest_passes_per_month} guest pass/mo`} />
+          )}
+          {m.perks_json?.lifetime && <RewardChip icon="star-outline" label="Lifetime honors" />}
+        </View>
+      )}
+    </View>
+  );
+}
+
+function RewardChip({ icon, label }: { icon: keyof typeof Ionicons.glyphMap; label: string }) {
+  return (
+    <View
+      style={{
+        flexDirection: 'row', alignItems: 'center', gap: 6,
+        paddingVertical: 6, paddingHorizontal: 10,
+        backgroundColor: '#FAEEE3',
+        borderWidth: 1, borderColor: '#F3D7BC',
+        borderRadius: 2,
+      }}
+    >
+      <Ionicons name={icon} size={14} color="#7A5526" accessibilityElementsHidden importantForAccessibility="no" />
+      <Text className="text-ink font-bodyMd text-[11px] tracking-[0.04em]">{label}</Text>
     </View>
   );
 }
