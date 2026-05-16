@@ -1,0 +1,40 @@
+# Supabase project config — this file's primary job is to mark
+# `supabase/` as the project root so the Supabase GitHub integration
+# picks up our migrations/ folder. Local dev defaults below are safe to
+# leave as-is; production settings are managed in the Supabase dashboard.
+
+project_id = "honey-pilates"
+
+[api]
+enabled = true
+port = 54321
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+
+[auth]
+enabled = true
+# Production redirect URLs are configured in the dashboard
+# (Auth → URL Configuration).
+site_url = "http://localhost:8081"
+additional_redirect_urls = ["honeypilates://"]
+jwt_expiry = 3600
+enable_signup = true
+enable_anonymous_sign_ins = false
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = true
+
+[auth.external.apple]
+enabled = false # flip on once Apple Sign-In is configured in dashboard
+
+[auth.external.google]
+enabled = false # flip on once Google OAuth is configured in dashboard
